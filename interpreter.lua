@@ -1,6 +1,6 @@
 Token = { value, type }
 
-INTEGER, PLUS, MINUS, TIMES, DIVIDE, EOF = "INTEGER", "PLUS", "MINUS", "TIMES", "DIVIDE", "EOF"
+INTEGER, ADD, MIN, MUL, DIV, EOF = "INTEGER", "ADD", "MIN", "MUL", "DIV", "EOF"
 
 function Token:new (value, type)
     setmetatable({}, Token);
@@ -18,83 +18,112 @@ Lexer = { input, pos }
 function Lexer:new (input)
     setmetatable({}, Lexer)
     self.input = input
-    self.pos = 0;
+    self.pos = 1;
     return self
 end
 
 function Lexer:getNextToken()
-    self.pos = self.pos + 1
+    if (self.input:sub(self.pos, self.pos) == ' ') then
+        self.pos = self.pos + 1
+    end
+
+    token = nil
+    case = {
+        ['+'] = function()
+            token = Token:new('+', ADD)
+        end,
+        ['-'] = function()
+            token = Token:new('-', MIN)
+        end,
+        ['*'] = function()
+            token = Token:new('*', MUL)
+        end,
+        ['/'] = function()
+            token = Token:new('/', DIV)
+        end,
+    }
+
     if (tonumber(self.input:sub(self.pos, self.pos))) then
-        return Token:new(tonumber(self.input:sub(self.pos, self.pos)), INTEGER)
-    elseif (self.input:sub(self.pos, self.pos) == '+') then
-        return Token:new('+', PLUS)
-    elseif (self.input:sub(self.pos, self.pos) == '-') then
-        return Token:new('-', MINUS)
-    elseif (self.input:sub(self.pos, self.pos) == '*') then
-        return Token:new('*', TIMES)
-    elseif (self.input:sub(self.pos, self.pos) == '/') then
-        return Token:new('/', DIVIDE)
-    elseif (self.input:sub(self.pos, self.pos) == ' ') then
-        return self:getNextToken()
+        token = Token:new(tonumber(self.input:sub(self.pos, self.pos)), INTEGER)
     else
+        if (case[self.input:sub(self.pos, self.pos)]) then
+            case[self.input:sub(self.pos, self.pos)]()
+        else
+            token = Token:new(nil, EOF)
+        end
+    end
+
+    self.pos = self.pos + 1
+    return token
+end
+
+function Lexer:num()
+    input = self.input:sub(self.pos, self.pos)
+    if (tonumber(input)) then
+        digits = ""
+        while true do
+            newToken = self:getNextToken()
+            if (newToken.type ~= INTEGER) then
+                break
+            end
+            digits = digits .. tostring(newToken.value)
+        end
+        self.pos = self.pos - 1
+        return Token:new(tonumber(digits), INTEGER)
+    elseif (input == '(') then
+        self.pos = self.pos + 1
+        sum = self:expr()
+        self.pos = self.pos + 1
+        return Token:new(sum, INTEGER)
+    elseif (input == ')') then
         return Token:new(nil, EOF)
     end
 end
 
-function Lexer:getNumber()
-    digits = ""
-    while true do
-        newToken = self:getNextToken()
-        if (newToken.type ~= INTEGER) then
-            break
-        end
-        digits = digits .. tostring(newToken.value)
-    end
-    self.pos = self.pos - 1
-    if (digits == "") then
-        return "DONE"
+function Lexer:getNewToken()
+    input = self.input:sub(self.pos, self.pos)
+    if (tonumber(input) or input == '(' or input == ')') then
+        return self:num()
     else
-        return tonumber(digits)
+        return self:getNextToken()
     end
 end
 
-function Lexer:calculateSum(sign, left, right)
-    sign = sign and tonumber(sign) or sign
-    case = {
-        ['+'] = function()
-            return left + right
-        end,
-        ['-'] = function()
-            return left - right
-        end,
-        ['*'] = function()
-            return left * right
-        end,
-        ['/'] = function()
-            return left / right
-        end,
-    }
-
-    return case[sign]()
-end
-
-function Lexer:evaluate()
-    sum = self:getNumber()
-
+function Lexer:term()
+    sum = self:getNewToken().value
     while true do
-        sign = self:getNextToken().value
-        nextNum = self:getNumber()
-        if (nextNum == "DONE") then
+        sign = self:getNewToken()
+        if sign.type ~= MUL and sign.type ~= DIV then
+            self.pos = self.pos - 1
             break
         end
-        sum = self:calculateSum(sign, sum, nextNum)
+        if (sign.type == MUL) then
+            sum = sum * self:getNewToken().value
+        elseif (sign.type == DIV) then
+            sum = sum / self:getNewToken().value
+        end
     end
+    return sum
+end
 
-    print(tostring(sum))
+function Lexer:expr()
+    sum = self:term()
+    while true do
+        operation = self:getNewToken()
+        if operation.type ~= ADD and operation.type ~= MIN then
+            break
+        end
+        if (operation.type == ADD) then
+            sum = sum + self:term()
+        elseif (operation.type == MIN) then
+            sum = sum - self:term()
+        end
+    end
+    return sum
 end
 
 while true do
     input = io.read("*l")
     lexer = Lexer:new(input)
-    lexer:evaluate()
+    print(lexer:expr())
 end
