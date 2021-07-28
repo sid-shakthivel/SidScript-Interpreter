@@ -1,129 +1,137 @@
-Token = { value, type }
-
 INTEGER, ADD, MIN, MUL, DIV, EOF = "INTEGER", "ADD", "MIN", "MUL", "DIV", "EOF"
 
-function Token:new (value, type)
-    setmetatable({}, Token);
-    self.value = value
-    self.type = type
+TreeNode = { Value, LeftNode, RightNode }
+
+function TreeNode:new(value)
+    setmetatable({}, TreeNode)
+    self.Value = value
     return self
 end
 
-function Token:getAttributes()
-    print("TYPE:", self.type, " VALUE:", self.value)
-end
+CToken = { Value, Type }
 
-Lexer = { input, pos }
-
-function Lexer:new (input)
-    setmetatable({}, Lexer)
-    self.input = input
-    self.pos = 1;
+function CToken:new(value, type)
+    setmetatable({}, CToken)
+    self.Value = value
+    self.Type = type
     return self
 end
 
-function Lexer:getNextToken()
-    if (self.input:sub(self.pos, self.pos) == ' ') then
-        self.pos = self.pos + 1
+Lexer = { CurrentPosition, Input }
+
+function Lexer:new(input)
+    setmetatable({ }, Lexer)
+    self.Input = input
+    self.CurrentPosition = 1
+    return self
+end
+
+function Lexer:GetInteger()
+    Digits = ""
+    repeat
+        Digit = self.Input:sub(self.CurrentPosition, self.CurrentPosition)
+        Digits = Digits .. tostring(Digit)
+        self.CurrentPosition = self.CurrentPosition + 1
+    until tonumber(Digit) ~= true
+    self.CurrentPosition = self.CurrentPosition - 1
+    return tonumber(Digits)
+end
+
+function Lexer:GetNextToken()
+    Character = self.Input:sub(self.CurrentPosition, self.CurrentPosition)
+    Token = nil
+
+    if (Character == ' ') then
+        self.CurrentPosition = self.CurrentPosition + 1
     end
 
-    token = nil
     case = {
         ['+'] = function()
-            token = Token:new('+', ADD)
+            return CToken:new('+', ADD)
         end,
         ['-'] = function()
-            token = Token:new('-', MIN)
+            return CToken:new('-', MIN)
         end,
         ['*'] = function()
-            token = Token:new('*', MUL)
+            return CToken:new('*', MUL)
         end,
         ['/'] = function()
-            token = Token:new('/', DIV)
+            return CToken:new('/', DIV)
         end,
     }
 
-    if (tonumber(self.input:sub(self.pos, self.pos))) then
-        token = Token:new(tonumber(self.input:sub(self.pos, self.pos)), INTEGER)
+    if (tonumber(Character)) then
+        Token = CToken:new(self:GetInteger(), INTEGER)
     else
-        if (case[self.input:sub(self.pos, self.pos)]) then
-            case[self.input:sub(self.pos, self.pos)]()
+        if (case[Character]) then
+            Token = case[Character]()
         else
-            token = Token:new(nil, EOF)
+            Token = CToken:new(nil, EOF)
         end
     end
 
-    self.pos = self.pos + 1
-    return token
+    self.CurrentPosition = self.CurrentPosition + 1
+    return Token
 end
 
-function Lexer:num()
-    input = self.input:sub(self.pos, self.pos)
-    if (tonumber(input)) then
-        digits = ""
-        while true do
-            newToken = self:getNextToken()
-            if (newToken.type ~= INTEGER) then
-                break
-            end
-            digits = digits .. tostring(newToken.value)
-        end
-        self.pos = self.pos - 1
-        return Token:new(tonumber(digits), INTEGER)
-    elseif (input == '(') then
-        self.pos = self.pos + 1
-        sum = self:expr()
-        self.pos = self.pos + 1
-        return Token:new(sum, INTEGER)
-    elseif (input == ')') then
-        return Token:new(nil, EOF)
-    end
+Parser = { Lexer, CurrentToken }
+
+function Parser:new(lexer)
+    setmetatable({ }, Parser)
+    self.Lexer = lexer
+    return self
 end
 
-function Lexer:getNewToken()
-    input = self.input:sub(self.pos, self.pos)
-    if (tonumber(input) or input == '(' or input == ')') then
-        return self:num()
-    else
-        return self:getNextToken()
-    end
+function Parser:SetNextToken()
+    self.CurrentToken = self.Lexer:GetNextToken()
 end
 
-function Lexer:term()
-    sum = self:getNewToken().value
+function Parser:expr()
+    Term = self:term()
+    Sum = Term
     while true do
-        sign = self:getNewToken()
-        if sign.type ~= MUL and sign.type ~= DIV then
-            self.pos = self.pos - 1
+        self:SetNextToken()
+        if (self.CurrentToken.Type == ADD) then
+            Sum = Factor + self:term()
+        elseif (self.CurrentToken.Type == MIN) then
+            Sum = Factor - self:term()
+        else
             break
         end
-        if (sign.type == MUL) then
-            sum = sum * self:getNewToken().value
-        elseif (sign.type == DIV) then
-            sum = sum / self:getNewToken().value
-        end
     end
-    return sum
+    return Sum
 end
 
-function Lexer:expr()
-    sum = self:term()
+function Parser:term()
+    Factor = self:factor()
+    Sum = Factor
     while true do
-        operation = self:getNewToken()
-        if operation.type ~= ADD and operation.type ~= MIN then
+        self:SetNextToken()
+        if (self.CurrentToken.Type == MUL) then
+            Sum = Factor * self:factor()
+        elseif (self.CurrentToken.Type == DIV) then
+            Sum = Factor / self:factor()
+        else
+            self.Lexer.CurrentPosition = self.Lexer.CurrentPosition - 1
             break
         end
-        if (operation.type == ADD) then
-            sum = sum + self:term()
-        elseif (operation.type == MIN) then
-            sum = sum - self:term()
-        end
     end
-    return sum
+    return Sum
 end
 
-while true do
-    input = io.read("*l")
-    lexer = Lexer:new(input)
-    print(lexer:expr())
+function Parser:factor()
+    self:SetNextToken()
+    return self.CurrentToken.Value
 end
+
+Interpreter = { Lexer, Parser }
+
+function Interpreter:new()
+    setmetatable({ }, Interpreter)
+    self.Lexer = Lexer:new("3+5")
+    self.Parser = Parser:new(self.Lexer)
+    return self
+end
+
+interpreter = Interpreter:new()
+print(interpreter.Parser:expr())
