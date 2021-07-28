@@ -1,4 +1,4 @@
-INTEGER, ADD, MIN, MUL, DIV, EOF = "INTEGER", "ADD", "MIN", "MUL", "DIV", "EOF"
+INTEGER, ADD, MIN, MUL, DIV, EOF, LPAREN, RPAREN = "INTEGER", "ADD", "MIN", "MUL", "DIV", "EOF", "LPAREN", "RPAREN"
 
 CTreeNode = { Token, LeftNode, RightNode }
 
@@ -72,6 +72,12 @@ function CLexer:GetNextToken()
         ['/'] = function()
             return CToken:new('/', DIV)
         end,
+        ['('] = function()
+            return CToken:new('(', LPAREN)
+        end,
+        [')'] = function ()
+            return CToken:new(')', RPAREN)
+        end
     }
 
     if (tonumber(Character)) then
@@ -145,7 +151,11 @@ end
 
 function CParser:factor()
     self:SetNextToken()
-    return CTreeNode:new(self.CurrentToken)
+    if (self.CurrentToken.Type == INTEGER) then
+        return CTreeNode:new(self.CurrentToken)
+    elseif (self.CurrentToken.Type == LPAREN) then
+        return self:expr()
+    end
 end
 
 CInterpreter = { Lexer, Parser }
@@ -153,7 +163,7 @@ CInterpreter = { Lexer, Parser }
 function CInterpreter:new()
     NewInterpreter = {}
     setmetatable(NewInterpreter, self)
-    NewInterpreter.Lexer = CLexer:new("3+5")
+    NewInterpreter.Lexer = CLexer:new("(3+5)*4")
     NewInterpreter.Parser = CParser:new(NewInterpreter.Lexer)
     self.__index = self
     return NewInterpreter
@@ -165,13 +175,13 @@ function CInterpreter:compute()
 end
 
 function CInterpreter:calculate(CurrentNode)
-    if (CurrentNode.Token.Value == '+') then
+    if (CurrentNode.Token.Type == ADD) then
         return self:calculate(CurrentNode.LeftNode) + self:calculate(CurrentNode.RightNode)
-    elseif (CurrentNode.Token.Value == '-') then
+    elseif (CurrentNode.Token.Type == MIN) then
         return self:calculate(CurrentNode.LeftNode) - self:calculate(CurrentNode.RightNode)
-    elseif (CurrentNode.Token.Value == '*') then
+    elseif (CurrentNode.Token.Type == MUL) then
         return self:calculate(CurrentNode.LeftNode) * self:calculate(CurrentNode.RightNode)
-    elseif (CurrentNode.Token.Value == '/') then
+    elseif (CurrentNode.Token.Type == DIV) then
         return self:calculate(CurrentNode.LeftNode) / self:calculate(CurrentNode.RightNode)
     elseif (tonumber(CurrentNode.Token.Value)) then
         return tonumber(CurrentNode.Token.Value)
