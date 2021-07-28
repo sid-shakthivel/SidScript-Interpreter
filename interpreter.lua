@@ -1,32 +1,46 @@
 INTEGER, ADD, MIN, MUL, DIV, EOF = "INTEGER", "ADD", "MIN", "MUL", "DIV", "EOF"
 
-TreeNode = { Value, LeftNode, RightNode }
+CTreeNode = { Token, LeftNode, RightNode }
 
-function TreeNode:new(value)
-    setmetatable({}, TreeNode)
-    self.Value = value
-    return self
+function CTreeNode:new(token)
+    NewNode = {}
+    setmetatable(NewNode, self)
+    NewNode.Token = token
+    self.__index = self
+    return NewNode
+end
+
+function CTreeNode:SetLeftNode(LeftNode)
+    self.LeftNode = LeftNode
+end
+
+function CTreeNode:SetRightNode(RightNode)
+    self.RightNode = RightNode
 end
 
 CToken = { Value, Type }
 
 function CToken:new(value, type)
-    setmetatable({}, CToken)
-    self.Value = value
-    self.Type = type
-    return self
+    NewToken = {}
+    setmetatable({}, self)
+    NewToken.Value = value
+    NewToken.Type = type
+    self.__index = self
+    return NewToken
 end
 
-Lexer = { CurrentPosition, Input }
+CLexer = { CurrentPosition, Input }
 
-function Lexer:new(input)
-    setmetatable({ }, Lexer)
-    self.Input = input
-    self.CurrentPosition = 1
-    return self
+function CLexer:new(input)
+    NewLexer = {}
+    setmetatable(NewLexer, self)
+    NewLexer.Input = input
+    NewLexer.CurrentPosition = 1
+    self.__index = self
+    return NewLexer
 end
 
-function Lexer:GetInteger()
+function CLexer:GetInteger()
     Digits = ""
     repeat
         Digit = self.Input:sub(self.CurrentPosition, self.CurrentPosition)
@@ -37,7 +51,7 @@ function Lexer:GetInteger()
     return tonumber(Digits)
 end
 
-function Lexer:GetNextToken()
+function CLexer:GetNextToken()
     Character = self.Input:sub(self.CurrentPosition, self.CurrentPosition)
     Token = nil
 
@@ -74,64 +88,97 @@ function Lexer:GetNextToken()
     return Token
 end
 
-Parser = { Lexer, CurrentToken }
+CParser = { Lexer, CurrentToken }
 
-function Parser:new(lexer)
-    setmetatable({ }, Parser)
-    self.Lexer = lexer
-    return self
+function CParser:new(lexer)
+    NewParser = {}
+    setmetatable(NewParser, self)
+    NewParser.Lexer = lexer
+    self.__index = self
+    return NewParser
 end
 
-function Parser:SetNextToken()
+function CParser:SetNextToken()
     self.CurrentToken = self.Lexer:GetNextToken()
 end
 
-function Parser:expr()
+function CParser:expr()
     Term = self:term()
-    Sum = Term
+    local Node = Term
     while true do
         self:SetNextToken()
         if (self.CurrentToken.Type == ADD) then
-            Sum = Factor + self:term()
+            Node = CTreeNode:new(self.CurrentToken)
+            Node:SetLeftNode(Term)
+            Node:SetRightNode(self:term())
         elseif (self.CurrentToken.Type == MIN) then
-            Sum = Factor - self:term()
+            Node = CTreeNode:new(self.CurrentToken)
+            Node:SetLeftNode(Term)
+            Node:SetRightNode(self:term())
         else
             break
         end
     end
-    return Sum
+    return Node
 end
 
-function Parser:term()
+function CParser:term()
     Factor = self:factor()
-    Sum = Factor
+    local Node = Factor
     while true do
         self:SetNextToken()
         if (self.CurrentToken.Type == MUL) then
-            Sum = Factor * self:factor()
+            Node = CTreeNode:new(self.CurrentToken)
+            Node:SetLeftNode(Factor)
+            Node:SetRightNode(self:factor())
         elseif (self.CurrentToken.Type == DIV) then
-            Sum = Factor / self:factor()
+            Node = CTreeNode:new(self.CurrentToken)
+            Node:SetLeftNode(Factor)
+            Node:SetRightNode(self:factor())
         else
             self.Lexer.CurrentPosition = self.Lexer.CurrentPosition - 1
             break
         end
     end
-    return Sum
+    return Node
 end
 
-function Parser:factor()
+function CParser:factor()
     self:SetNextToken()
-    return self.CurrentToken.Value
+    return CTreeNode:new(self.CurrentToken)
 end
 
-Interpreter = { Lexer, Parser }
+CInterpreter = { Lexer, Parser }
 
-function Interpreter:new()
-    setmetatable({ }, Interpreter)
-    self.Lexer = Lexer:new("3+5")
-    self.Parser = Parser:new(self.Lexer)
-    return self
+function CInterpreter:new()
+    NewInterpreter = {}
+    setmetatable(NewInterpreter, self)
+    NewInterpreter.Lexer = CLexer:new("3+5")
+    NewInterpreter.Parser = CParser:new(NewInterpreter.Lexer)
+    self.__index = self
+    return NewInterpreter
 end
 
-interpreter = Interpreter:new()
-print(interpreter.Parser:expr())
+function CInterpreter:compute()
+    root = interpreter.Parser:expr()
+    print(self:calculate(root))
+end
+
+function CInterpreter:calculate(CurrentNode)
+    if (CurrentNode.Token.Value == '+') then
+        return self:calculate(CurrentNode.LeftNode) + self:calculate(CurrentNode.RightNode)
+    elseif (CurrentNode.Token.Value == '-') then
+        return self:calculate(CurrentNode.LeftNode) - self:calculate(CurrentNode.RightNode)
+    elseif (CurrentNode.Token.Value == '*') then
+        return self:calculate(CurrentNode.LeftNode) * self:calculate(CurrentNode.RightNode)
+    elseif (CurrentNode.Token.Value == '/') then
+        return self:calculate(CurrentNode.LeftNode) / self:calculate(CurrentNode.RightNode)
+    elseif (tonumber(CurrentNode.Token.Value)) then
+        return tonumber(CurrentNode.Token.Value)
+    else
+        return 0
+    end
+end
+
+interpreter = CInterpreter:new()
+interpreter:compute()
