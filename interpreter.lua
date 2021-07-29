@@ -38,6 +38,38 @@ function CUnaryNode:new(Token, NextNode)
     return NewNode
 end
 
+CAssignmentNode = { Token, Variable, Expr }
+
+function CAssignmentNode:new(Token, Variable, Expr)
+    NewNode = {}
+    setmetatable(NewNode, self)
+    NewNode.Token = Token
+    NewNode.Variable = Variable
+    NewNode.Expr = Expr
+    self.__index = self
+    return NewNode
+end
+
+CProgramNode = { Children }
+
+function CProgramNode:new()
+    NewNode = {}
+    setmetatable(NewNode, self)
+    NewNode.Children = {}
+    self.__index = self
+    return NewNode
+end
+
+CNode = { Token }
+
+function CNode:new(Token)
+    NewNode = {}
+    setmetatable(CNode, self)
+    NewNode.Token = Token
+    self.__index = self
+    return NewNode
+end
+
 CToken = { Value, Type }
 
 function CToken:new(value, type)
@@ -60,6 +92,8 @@ function CLexer:new(input)
     return NewLexer
 end
 
+VariableTable = {}
+
 function CLexer:GetInteger()
     local Digits = ""
     repeat
@@ -73,7 +107,7 @@ end
 
 function CLexer:GetNextToken()
     local Character = self.Input:sub(self.CurrentPosition, self.CurrentPosition)
-    local Token = nil
+    local Token
 
     if (Character == ' ') then
         self.CurrentPosition = self.CurrentPosition + 1
@@ -134,14 +168,6 @@ function CLexer:GetNextToken()
     return Token
 end
 
-lexer = CLexer:new("START a = 2; FINISH")
-print(lexer:GetNextToken().Type)
-print(lexer:GetNextToken().Type)
-print(lexer:GetNextToken().Type)
-print(lexer:GetNextToken().Type)
-print(lexer:GetNextToken().Type)
-print(lexer:GetNextToken().Type)
-
 CParser = { Lexer, CurrentToken }
 
 function CParser:new(lexer)
@@ -152,8 +178,34 @@ function CParser:new(lexer)
     return NewParser
 end
 
-function CParser:SetNextToken()
-    self.CurrentToken = self.Lexer:GetNextToken()
+function CParser:Program()
+    self:SetNextToken()
+    return self:Statements()
+end
+
+function CParser:Statements()
+    Statements = {}
+    while true do
+        table.insert(Statements, (self:Statement()))
+        if (self.CurrentToken.Type ~= Tokens.SEMI) then
+            break
+        end
+    end
+    return Statements
+end
+
+function CParser:Statement()
+    self:SetNextToken()
+    if (self.CurrentToken.Type == Tokens.VAR) then
+        return self:Assignment()
+    end
+end
+
+function CParser:Assignment()
+    local Node = self:var()
+    self:SetNextToken()
+    Node = CAssignmentNode:new(self.CurrentToken, Node, self:expr())
+    return Node
 end
 
 function CParser:expr()
@@ -185,55 +237,52 @@ end
 
 function CParser:factor()
     self:SetNextToken()
-    if (self.CurrentToken.Type == INTEGER) then
-        return CUnaryNode:new(self.CurrentToken)
-    elseif (self.CurrentToken.Type == LPAREN) then
+    if (self.CurrentToken.Type == Tokens.INTEGER) then
+        return CNode:new(self.CurrentToken)
+    elseif (self.CurrentToken.Type == Tokens.LPAREN) then
         return self:expr()
-    elseif (self.CurrentToken.Type == ADD or self.CurrentToken.Type == MIN) then
+    elseif (self.CurrentToken.Type == Tokens.ADD or self.CurrentToken.Type == Tokens.MIN) then
         local Operator = CUnaryNode:new(self.CurrentToken, self:factor())
         return Operator
+    else
+        return self:var()
     end
+end
+
+function CParser:var()
+    return CNode:new(self.CurrentToken)
+end
+
+function CParser:SetNextToken()
+    self.CurrentToken = self.Lexer:GetNextToken()
 end
 
 CInterpreter = { Lexer, Parser }
 
-function CInterpreter:new()
+function CInterpreter:new(LexerInput)
     NewInterpreter = {}
     setmetatable(NewInterpreter, self)
-    NewInterpreter.Lexer = CLexer:new("5 - - - + - (3 + 4) - +2")
+    NewInterpreter.Lexer = CLexer:new(LexerInput)
     NewInterpreter.Parser = CParser:new(NewInterpreter.Lexer)
     self.__index = self
     return NewInterpreter
 end
 
-function CInterpreter:compute()
---
-end
-
-function CInterpreter:calculate(CurrentNode)
-    if (CurrentNode == nil or CurrentNode.Token == nil) then
-        return 0
-    elseif (CurrentNode.Token.Type == ADD) then
-        if (CurrentNode.NextNode) then
-            return self:calculate(CurrentNode.NextNode)
-        else
-            return self:calculate(CurrentNode.LeftNode) + self:calculate(CurrentNode.RightNode)
-        end
-    elseif (CurrentNode.Token.Type == MIN) then
-        if (CurrentNode.NextNode) then
-            return -self:calculate(CurrentNode.NextNode)
-        else
-            return self:calculate(CurrentNode.LeftNode) - self:calculate(CurrentNode.RightNode)
-        end
-    elseif (CurrentNode.Token.Type == MUL) then
-        return self:calculate(CurrentNode.LeftNode) * self:calculate(CurrentNode.RightNode)
-    elseif (CurrentNode.Token.Type == DIV) then
-        return self:calculate(CurrentNode.LeftNode) / self:calculate(CurrentNode.RightNode)
-    elseif (tonumber(CurrentNode.Token.Value)) then
-        return tonumber(CurrentNode.Token.Value)
-    else
+function CInterpreter:Interpret(CurrentNode)
+    if (CurrentNode.Token.Type == Tokens.ASSIGN) then
+        VariableTable[CurrentNode.Variable.Token.Value] = CurrentNode.Expr.Token.Value
         return 0
     end
 end
 
-interpreter = CInterpreter:new()
+function CInterpreter:Execute()
+    Root = self.Parser:Program()
+    for i = 1, #Root do
+        self:Interpret(Root[i])
+    end
+    print(VariableTable["var"])
+    print(VariableTable["variable"])
+end
+
+interpreter = CInterpreter:new("START var = 2; variable = 5; FINISH")
+interpreter:Execute()
