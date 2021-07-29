@@ -1,4 +1,19 @@
-INTEGER, ADD, MIN, MUL, DIV, EOF, LPAREN, RPAREN = "INTEGER", "ADD", "MIN", "MUL", "DIV", "EOF", "LPAREN", "RPAREN"
+Tokens = {
+    INTEGER = "INTEGER",
+    ADD = "ADD",
+    MIN = "MIN",
+    DIV = "DIV",
+    MUL = "MUL",
+    EOF = "EOF",
+    LPAREN = "LPAREN",
+    RPAREN = "RPAREN",
+    START = "START",
+    FINISH = "FINISH",
+    DOT = "DOT",
+    ASSIGN = "ASSIGN",
+    VAR = "VAR",
+    SEMI = "SEMI"
+}
 
 CBinaryNode = { Token, LeftNode, RightNode }
 
@@ -67,38 +82,65 @@ function CLexer:GetNextToken()
 
     case = {
         ['+'] = function()
-            return CToken:new('+', ADD)
+            return CToken:new('+', Tokens.Add)
         end,
         ['-'] = function()
-            return CToken:new('-', MIN)
+            return CToken:new('-', Tokens.MIN)
         end,
         ['*'] = function()
-            return CToken:new('*', MUL)
+            return CToken:new('*', Tokens.MUL)
         end,
         ['/'] = function()
-            return CToken:new('/', DIV)
+            return CToken:new('/', Tokens.DIV)
         end,
         ['('] = function()
-            return CToken:new('(', LPAREN)
+            return CToken:new('(', Tokens.LPAREN)
         end,
-        [')'] = function ()
-            return CToken:new(')', RPAREN)
+        [')'] = function()
+            return CToken:new(')', Tokens.RPAREN)
+        end,
+        ['.'] = function()
+            return CToken:new('.', Tokens.DOT)
+        end,
+        [';'] = function()
+            return CToken:new(';', Tokens.SEMI)
+        end,
+        ['='] = function()
+            return CToken:new('=', Tokens.ASSIGN)
         end
     }
 
     if (tonumber(Character)) then
-        Token = CToken:new(self:GetInteger(), INTEGER)
+        Token = CToken:new(self:GetInteger(), Tokens.INTEGER)
     else
         if (case[Character]) then
             Token = case[Character]()
         else
-            Token = CToken:new(nil, EOF)
+            local OldPosition = self.CurrentPosition
+            local NextSpace = string.find(self.Input, " ", self.CurrentPosition) or #self.Input + 1
+            local Result = self.Input:sub(OldPosition, NextSpace-1)
+            if Result == "START" then
+                Token = CToken:new(Result, Tokens.START)
+            elseif Result == "FINISH" then
+                Token = CToken:new(Result, Tokens.FINISH)
+            else
+                Token = CToken:new(Result, Tokens.VAR)
+            end
+            self.CurrentPosition = NextSpace
         end
     end
 
     self.CurrentPosition = self.CurrentPosition + 1
     return Token
 end
+
+lexer = CLexer:new("START a = 2; FINISH")
+print(lexer:GetNextToken().Type)
+print(lexer:GetNextToken().Type)
+print(lexer:GetNextToken().Type)
+print(lexer:GetNextToken().Type)
+print(lexer:GetNextToken().Type)
+print(lexer:GetNextToken().Type)
 
 CParser = { Lexer, CurrentToken }
 
@@ -165,8 +207,7 @@ function CInterpreter:new()
 end
 
 function CInterpreter:compute()
-    local Root = interpreter.Parser:expr()
-    print(self:calculate(Root))
+--
 end
 
 function CInterpreter:calculate(CurrentNode)
@@ -196,4 +237,3 @@ function CInterpreter:calculate(CurrentNode)
 end
 
 interpreter = CInterpreter:new()
-interpreter:compute()
