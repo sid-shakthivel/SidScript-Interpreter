@@ -96,11 +96,15 @@ VariableTable = {}
 
 function CLexer:GetInteger()
     local Digits = ""
-    repeat
-        Digit = self.Input:sub(self.CurrentPosition, self.CurrentPosition)
-        Digits = Digits .. tostring(Digit)
+    while true do
+        local Digit = self.Input:sub(self.CurrentPosition, self.CurrentPosition)
+        if (tonumber(Digit)) then
+            Digits = Digits .. Digit
+        else
+            break
+        end
         self.CurrentPosition = self.CurrentPosition + 1
-    until tonumber(Digit) ~= true
+    end
     self.CurrentPosition = self.CurrentPosition - 1
     return tonumber(Digits)
 end
@@ -116,7 +120,7 @@ function CLexer:GetNextToken()
 
     case = {
         ['+'] = function()
-            return CToken:new('+', Tokens.Add)
+            return CToken:new('+', Tokens.ADD)
         end,
         ['-'] = function()
             return CToken:new('-', Tokens.MIN)
@@ -152,7 +156,7 @@ function CLexer:GetNextToken()
         else
             local OldPosition = self.CurrentPosition
             local NextSpace = string.find(self.Input, " ", self.CurrentPosition) or #self.Input + 1
-            local Result = self.Input:sub(OldPosition, NextSpace-1)
+            local Result = string.gsub(self.Input:sub(OldPosition, NextSpace-1), ";", "")
             if Result == "START" then
                 Token = CToken:new(Result, Tokens.START)
             elseif Result == "FINISH" then
@@ -212,7 +216,7 @@ function CParser:expr()
     local Node = self:term()
     while true do
         self:SetNextToken()
-        if (self.CurrentToken.Type == ADD or self.CurrentToken.Type == MIN) then
+        if (self.CurrentToken.Type == Tokens.ADD or self.CurrentToken.Type == Tokens.MIN) then
             Node = CBinaryNode:new(self.CurrentToken, Node, self:term())
         else
             break
@@ -225,7 +229,7 @@ function CParser:term()
     local Node = self:factor()
     while true do
         self:SetNextToken()
-        if (self.CurrentToken.Type == MUL or self.CurrentToken.Type == DIV) then
+        if (self.CurrentToken.Type == Tokens.MUL or self.CurrentToken.Type == Tokens.DIV) then
             Node = CBinaryNode:new(self.CurrentToken, Node, self:factor())
         else
             self.Lexer.CurrentPosition = self.Lexer.CurrentPosition - 1
@@ -269,9 +273,31 @@ function CInterpreter:new(LexerInput)
 end
 
 function CInterpreter:Interpret(CurrentNode)
-    if (CurrentNode.Token.Type == Tokens.ASSIGN) then
-        VariableTable[CurrentNode.Variable.Token.Value] = CurrentNode.Expr.Token.Value
+    if (CurrentNode == nil or CurrentNode.Token == nil) then
         return 0
+    elseif (CurrentNode.Token.Type == Tokens.ASSIGN) then
+        VariableTable[CurrentNode.Variable.Token.Value] = self:Interpret(CurrentNode.Expr)
+        return 0
+    elseif (CurrentNode.Token.Type == Tokens.ADD) then
+        if (CurrentNode.NextNode) then
+            return self:Interpret(CurrentNode.NextNode)
+        else
+            return self:Interpret(CurrentNode.LeftNode) + self:Interpret(CurrentNode.RightNode)
+        end
+    elseif (CurrentNode.Token.Type == Tokens.MIN) then
+        if (CurrentNode.NextNode) then
+            return -self:Interpret(CurrentNode.NextNode)
+        else
+            return self:Interpret(CurrentNode.LeftNode) - self:Interpret(CurrentNode.RightNode)
+        end
+    elseif (CurrentNode.Token.Type == Tokens.MUL) then
+        return self:Interpret(CurrentNode.LeftNode) * self:Interpret(CurrentNode.RightNode)
+    elseif (CurrentNode.Token.Type == Tokens.DIV) then
+        return self:Interpret(CurrentNode.LeftNode) / self:Interpret(CurrentNode.RightNode)
+    elseif (tonumber(CurrentNode.Token.Value)) then
+        return tonumber(CurrentNode.Token.Value)
+    elseif (CurrentNode.Token.Type == Tokens.VAR) then
+        return VariableTable[CurrentNode.Token.Value]
     end
 end
 
@@ -280,9 +306,13 @@ function CInterpreter:Execute()
     for i = 1, #Root do
         self:Interpret(Root[i])
     end
-    print(VariableTable["var"])
+
+    print(VariableTable["test"])
     print(VariableTable["variable"])
+    print(VariableTable["jim"])
 end
 
-interpreter = CInterpreter:new("START var = 2; variable = 5; FINISH")
+interpreter = CInterpreter:new("START test = 4*5; variable = 31; jim = variable + test; FINISH")
 interpreter:Execute()
+
+-- test = (4+5)*4; variable = 45;
