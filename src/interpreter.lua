@@ -1,7 +1,8 @@
 local CLexer = require("src.lexer")[1]
 local CParser = require("src.parser")[1]
+local CSymbolTable = require("src.symboltable")[1]
 
-CInterpreter = { Lexer, Parser }
+CInterpreter = { Lexer, Parser, SymbolTable }
 CInterpreter.VariableTable = {}
 
 function CInterpreter:new(LexerInput)
@@ -9,6 +10,7 @@ function CInterpreter:new(LexerInput)
     setmetatable(NewInterpreter, self)
     NewInterpreter.Lexer = CLexer:new(LexerInput)
     NewInterpreter.Parser = CParser:new(NewInterpreter.Lexer)
+    NewInterpreter.SymbolTable = CSymbolTable:new(NewInterpreter.Lexer.Tokens)
     self.__index = self
     return NewInterpreter
 end
@@ -19,11 +21,9 @@ function CInterpreter:Interpret(CurrentNode)
     elseif (CurrentNode.Token.Type == self.Lexer.Tokens.ASSIGN) then
         local Expr = self:Interpret(CurrentNode.RightNode)
         if (CurrentNode.LeftNode.Token.Type == self.Lexer.Tokens.VAR) then
-            if (tonumber(Expr) and  self.VariableTable[CurrentNode.LeftNode.Token.Value].Type == self.Lexer.Tokens.NUM) then
-                self.VariableTable[CurrentNode.LeftNode.Token.Value].Expr = Expr
-            end
-        elseif (CurrentNode.LeftNode.Token.Type == self.Lexer.Tokens.NUM and tonumber(Expr)) then
-            self.VariableTable[self:Interpret(CurrentNode.LeftNode)] = { Expr = Expr, Type = self.Lexer.Tokens.NUM }
+            self.VariableTable[CurrentNode.LeftNode.Token.Value] = Expr
+        elseif (CurrentNode.LeftNode.Token.Type == self.Lexer.Tokens.NUM) then
+            self.VariableTable[self:Interpret(CurrentNode.LeftNode)] = Expr
         else
             error("Parsing Error")
         end
@@ -57,8 +57,12 @@ function CInterpreter:Execute()
     Root = self.Parser:Program()
 
     for i = 1, #Root do
-        self:Interpret(Root[i])
+        self.SymbolTable:BuildSymbolTable(Root[i])
     end
+
+    --for i = 1, #Root do
+    --    self:Interpret(Root[i])
+    --end
 end
 
 return { CInterpreter }
