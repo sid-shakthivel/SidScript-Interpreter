@@ -1,6 +1,6 @@
-local CLexer = require("src.lexer")[1]
-local CParser = require("src.parser")[1]
-local CSymbolTable = require("src.symboltable")[1]
+local CLexer = require("src.Lexer")[1]
+local CParser = require("src.Parser")[1]
+local CSymbolTable = require("src.SymbolTable")[1]
 
 CInterpreter = { Lexer, Parser, SymbolTable, Tokens }
 CInterpreter.VariableTable = {}

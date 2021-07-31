@@ -1,4 +1,4 @@
-local CInterpreter = require("src.interpreter")[1]
+local CInterpreter = require("src.Interpreter")[1]
 
 Interpreter = CInterpreter:new("START str a = `hello world` FINISH")
 Interpreter:Execute()
