@@ -12,7 +12,6 @@ end
 CLexer = { CurrentPosition, Input }
 
 CLexer.Tokens = {
-    INTEGER = "INTEGER",
     ADD = "ADD",
     MIN = "MIN",
     DIV = "DIV",
@@ -26,9 +25,12 @@ CLexer.Tokens = {
     ASSIGN = "ASSIGN",
     VAR = "VAR",
     SEMI = "SEMI",
+    NUM_TYPE = "NUM_TYPE",
+    STR_TYPE = "STR_TYPE",
+    BOOL_TYPE = "BOOL_TYPE",
     NUM = "NUM",
     STR = "STR",
-    BOOL = "BOOL"
+    BOOl = "BOOL"
 }
 
 function CLexer:new(input)
@@ -40,7 +42,7 @@ function CLexer:new(input)
     return NewLexer
 end
 
-function CLexer:GetInteger()
+function CLexer:GetNumber()
     local Digits = ""
     while true do
         local Digit = self.Input:sub(self.CurrentPosition, self.CurrentPosition)
@@ -102,18 +104,24 @@ function CLexer:GetNextToken()
             return CToken:new("FINISH", self.Tokens.FINISH)
         end,
         ["num"] = function()
-            return CToken:new("NUM", self.Tokens.NUM)
+            return CToken:new("NUM_TYPE", self.Tokens.NUM_TYPE)
         end,
         ["str"] = function()
-            return CToken:new("STR", self.Tokens.STR)
+            return CToken:new("STR_TYPE", self.Tokens.STR_TYPE)
         end,
         ["bool"] = function()
-            return CToken:new("BOOL", self.Tokens.BOOL)
+            return CToken:new("BOOL_TYPE", self.Tokens.BOOL_TYPE)
+        end,
+        ["true"] = function ()
+            return CToken:new("true", self.Tokens.BOOL)
+        end,
+        ["false"] = function ()
+            return CToken:new("false", self.Tokens.BOOL)
         end
     }
 
     if (tonumber(Character)) then
-        Token = CToken:new(self:GetInteger(), self.Tokens.INTEGER)
+        Token = CToken:new(self:GetNumber(), self.Tokens.NUM)
     else
         if (SingleCharacterCases[Character]) then
             Token = SingleCharacterCases[Character]()
@@ -124,7 +132,11 @@ function CLexer:GetNextToken()
             if (MultiCharacterCases[Result]) then
                 Token = MultiCharacterCases[Result]()
             else
-                Token = CToken:new(Result, self.Tokens.VAR)
+                if (Result:sub(1, 1) == "`") then
+                    Token = CToken:new(string.gsub(self.Input:sub(OldPosition, NextSpace), "`", ""), self.Tokens.STR)
+                else
+                    Token = CToken:new(Result, self.Tokens.VAR)
+                end
             end
             self.CurrentPosition = NextSpace
         end

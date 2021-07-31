@@ -1,11 +1,12 @@
 local CAST = require("src.AST")
 
-CParser = { Lexer, CurrentToken }
+CParser = { Lexer, CurrentToken, Tokens }
 
 function CParser:new(Lexer)
     NewParser = {}
     setmetatable(NewParser, self)
     NewParser.Lexer = Lexer
+    NewParser.Tokens = NewParser.Lexer.Tokens
     self.__index = self
     return NewParser
 end
@@ -19,7 +20,7 @@ function CParser:Statements()
     Statements = {}
     while true do
         table.insert(Statements, (self:Statement()))
-        if (self.CurrentToken.Type ~= self.Lexer.Tokens.SEMI) then
+        if (self.CurrentToken.Type ~= self.Tokens.SEMI) then
             break
         end
     end
@@ -28,24 +29,45 @@ end
 
 function CParser:Statement()
     self:SetNextToken()
-    if (self.CurrentToken.Type == self.Lexer.Tokens.NUM or self.CurrentToken.Type == self.Lexer.Tokens.STR or self.CurrentToken.Type == self.Lexer.Tokens.BOOL or self.CurrentToken.Type == self.Lexer.Tokens.VAR) then
+    if (self.CurrentToken.Type == self.Tokens.NUM_TYPE or self.CurrentToken.Type == self.Tokens.STR_TYPE or self.CurrentToken.Type == self.Tokens.BOOL_TYPE or self.CurrentToken.Type == self.Tokens.VAR) then
         return self:Assignment()
     end
 end
 
 function CParser:Assignment()
-    local Node = self:var()
+    local Node = self:Variable()
     self:SetNextToken()
-    Node = CAST.CBinaryNode:new(self.CurrentToken, Node, self:expr())
+    Node = CAST.CBinaryNode:new(self.CurrentToken, Node, self:Value())
     return Node
 end
 
-function CParser:expr()
-    local Node = self:term()
+function CParser:Value()
+    self:SetNextToken()
+    if (self.CurrentToken.Type == self.Tokens.STR) then
+        return CAST.CNode:new(self.CurrentToken)
+    elseif (self.CurrentToken.Type == self.Tokens.BOOL) then
+        return CAST.CNode:new(self.CurrentToken)
+    else
+        return self:Expr()
+    end
+end
+
+function CParser:Variable()
+    if (self.CurrentToken.Type == self.Tokens.NUM_TYPE or self.CurrentToken.Type == self.Tokens.STR_TYPE or self.CurrentToken.Type == self.Tokens.BOOL_TYPE) then
+        local OldToken = self.CurrentToken
+        self:SetNextToken()
+        return CAST.CUnaryNode:new(OldToken, self:Variable())
+    else
+        return CAST.CNode:new(self.CurrentToken)
+    end
+end
+
+function CParser:Expr()
+    local Node = self:Term()
     while true do
         self:SetNextToken()
-        if (self.CurrentToken.Type == self.Lexer.Tokens.ADD or self.CurrentToken.Type == self.Lexer.Tokens.MIN) then
-            Node = CAST.CBinaryNode:new(self.CurrentToken, Node, self:term())
+        if (self.CurrentToken.Type == self.Tokens.ADD or self.CurrentToken.Type == self.Tokens.MIN) then
+            Node = CAST.CBinaryNode:new(self.CurrentToken, Node, self:Term())
         else
             break
         end
@@ -53,12 +75,12 @@ function CParser:expr()
     return Node
 end
 
-function CParser:term()
-    local Node = self:factor()
+function CParser:Term()
+    local Node = self:Factor()
     while true do
         self:SetNextToken()
-        if (self.CurrentToken.Type == self.Lexer.Tokens.MUL or self.CurrentToken.Type == self.Lexer.Tokens.DIV) then
-            Node = CAST.CBinaryNode:new(self.CurrentToken, Node, self:factor())
+        if (self.CurrentToken.Type == self.Tokens.MUL or self.CurrentToken.Type == self.Tokens.DIV) then
+            Node = CAST.CBinaryNode:new(self.CurrentToken, Node, self:Factor())
         else
             self.Lexer.CurrentPosition = self.Lexer.CurrentPosition - 1
             break
@@ -67,27 +89,17 @@ function CParser:term()
     return Node
 end
 
-function CParser:factor()
+function CParser:Factor()
     self:SetNextToken()
-    if (self.CurrentToken.Type == self.Lexer.Tokens.INTEGER) then
+    if (self.CurrentToken.Type == self.Tokens.NUM) then
         return CAST.CNode:new(self.CurrentToken)
-    elseif (self.CurrentToken.Type == self.Lexer.Tokens.LPAREN) then
-        return self:expr()
-    elseif (self.CurrentToken.Type == self.Lexer.Tokens.ADD or self.CurrentToken.Type == self.Lexer.Tokens.MIN) then
+    elseif (self.CurrentToken.Type == self.Tokens.LPAREN) then
+        return self:Expr()
+    elseif (self.CurrentToken.Type == self.Tokens.ADD or self.CurrentToken.Type == self.Tokens.MIN) then
         local Operator = CAST.CUnaryNode:new(self.CurrentToken, self:factor())
         return Operator
     else
-        return self:var()
-    end
-end
-
-function CParser:var()
-    if (self.CurrentToken.Type == self.Lexer.Tokens.NUM) then
-        local OldToken = self.CurrentToken
-        self:SetNextToken()
-        return CAST.CUnaryNode:new(OldToken, self:var())
-    else
-        return CAST.CNode:new(self.CurrentToken)
+        return self:Variable()
     end
 end
 
