@@ -42,7 +42,6 @@ function CParser:Assignment()
 end
 
 function CParser:Value()
-    self:SetNextToken()
     if (self.CurrentToken.Type == self.Tokens.STR) then
         return CAST.CNode:new(self.CurrentToken)
     elseif (self.CurrentToken.Type == self.Tokens.BOOL) then
@@ -96,7 +95,7 @@ function CParser:Factor()
     elseif (self.CurrentToken.Type == self.Tokens.LPAREN) then
         return self:Expr()
     elseif (self.CurrentToken.Type == self.Tokens.ADD or self.CurrentToken.Type == self.Tokens.MIN) then
-        local Operator = CAST.CUnaryNode:new(self.CurrentToken, self:factor())
+        local Operator = CAST.CUnaryNode:new(self.CurrentToken, self:Factor())
         return Operator
     else
         return self:Variable()

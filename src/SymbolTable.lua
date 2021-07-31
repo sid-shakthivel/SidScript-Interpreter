@@ -52,17 +52,10 @@ function CSymbolTable:Evaluate(CurrentNode, CurrentType)
         else
             return 0
         end
-    elseif (CurrentNode.Token.Type == self.Tokens.NUM_TYPE or CurrentNode.Type == self.Tokens.STR_TYPE or CurrentNode.Type == self.Tokens.BOOL_TYPE) then
+    elseif (CurrentNode.Token.Type == self.Tokens.NUM_TYPE or CurrentNode.Token.Type == self.Tokens.STR_TYPE or CurrentNode.Token.Type == self.Tokens.BOOL_TYPE) then
         local Variable = CurrentNode.NextNode.Token
         self:SetSymbol(Variable.Value, CurrentNode.Token.Type, "VARIABLE")
         return self:GetSymbol(Variable.Value)
-    elseif (CurrentNode.Token.Type == self.Tokens.VAR) then
-        local Variable = self:GetSymbol(CurrentNode.Token.Value)
-        if (Variable == nil) then
-            error("ERROR: VARIABLE " .. Variable.Name .. " NOT DECLARED")
-        else
-            return Variable
-        end
     elseif (CurrentNode.Token.Type == self.Tokens.ADD or CurrentNode.Token.Type == self.Tokens.MUL or CurrentNode.Token.Type == self.Tokens.MIN or CurrentNode.Token.Type == self.Tokens.DIV) then
         local LeftNode = self:Evaluate(CurrentNode)
         local RightNode = self:Evaluate(RightNode)
@@ -72,17 +65,24 @@ function CSymbolTable:Evaluate(CurrentNode, CurrentType)
             return RightNode
         end
     elseif (CurrentNode.Token.Type == self.Tokens.STR) then
-        local Variable = CurrentNode.NextNode.Token
-        self:SetSymbol(Variable.Value, Variable.Type, "STRING")
+        local Variable = CurrentNode.Token
+        self:SetSymbol(Variable.Value, self.Tokens.STR_TYPE, "STRING")
         return self:GetSymbol(Variable.Value)
     elseif (CurrentNode.Token.Type == self.Tokens.NUM) then
-        local Variable = CurrentNode.NextNode.Token
-        self:SetSymbol(Variable.Value, Variable.Type, "NUMBER")
+        local Variable = CurrentNode.Token
+        self:SetSymbol(Variable.Value, self.Tokens.NUM_TYPE, "NUMBER")
         return self:GetSymbol(Variable.Value)
     elseif (CurrentNode.Token.Type == self.Tokens.BOOL) then
-        local Variable = CurrentNode.NextNode.Token
-        self:SetSymbol(Variable.Value, Variable.Type, "BOOLEAN")
+        local Variable = CurrentNode.Token
+        self:SetSymbol(Variable.Value, self.Tokens.BOOL_TYPE, "BOOLEAN")
         return self:GetSymbol(Variable.Value)
+    elseif (CurrentNode.Token.Type == self.Tokens.VAR) then
+        local Variable = self:GetSymbol(CurrentNode.Token.Value)
+        if (Variable == nil) then
+            error("ERROR: VARIABLE " .. CurrentNode.Token.Value .. " NOT DECLARED")
+        else
+            return Variable
+        end
     end
 end
 
