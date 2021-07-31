@@ -1,6 +1,4 @@
-CSymbolTable = { Symbols = { }, Tokens, VariableTable }
-
-CVariableSymbol = { Name, Value, Type }
+CVariableSymbol = { Name, Type }
 
 function CVariableSymbol:new(Name, Type)
     NewVariableSymbol = {}
@@ -11,6 +9,19 @@ function CVariableSymbol:new(Name, Type)
     return NewVariableSymbol
 end
 
+CBuiltInSymbol = { Name, Type }
+
+function CBuiltInSymbol:new(Name, Type)
+    NewBuiltInSymbol = {}
+    setmetatable(NewBuiltInSymbol, self)
+    NewBuiltInSymbol.Name = Name
+    NewBuiltInSymbol.Type = Type
+    self.__index = self
+    return NewBuiltInSymbol
+end
+
+CSymbolTable = { Symbols = { }, Tokens, VariableTable }
+
 function CSymbolTable:new(Tokens, VariableTable)
     NewSymbolTable = {}
     setmetatable(NewSymbolTable, self)
@@ -20,8 +31,11 @@ function CSymbolTable:new(Tokens, VariableTable)
     return NewSymbolTable
 end
 
-function CSymbolTable:SetSymbol(Name, Type)
-    NewSymbol = CVariableSymbol:new(Name, Type)
+function CSymbolTable:SetSymbol(Name, Type, Category)
+    if (Category == "VARIABLE") then
+        NewSymbol = CVariableSymbol:new(Name, Type)
+    elseif (Category == "NUMBER") then
+    end
     self.Symbols[Name] = NewSymbol
 end
 
@@ -34,50 +48,32 @@ function CSymbolTable:BuildSymbolTable(CurrentNode)
         return 0
     elseif (CurrentNode.Token.Type == self.Tokens.ASSIGN) then
         local Variable =  self:BuildSymbolTable(CurrentNode.LeftNode)
-        if (CurrentNode.LeftNode.Type == self.Tokens.ADD) then
-            local Expr = self:ArithmeticEvaluator(CurrentNode.RightNode)
-            if (tonumber(Expr) == false) then
-                print("ERROR")
-            end
+        local Expr = self:BuildSymbolTable(CurrentNode.RightNode)
+        if (Expr.Type ~= self.Tokens.NUM) then
+            print("ERROR")
         end
     elseif (CurrentNode.Token.Type == self.Tokens.VAR) then
         if ((self:GetSymbol(CurrentNode.Token.Value)) == nil) then
-            print("ERROR")
+            error("ERROR: VARIABLE NOT DECLARED")
         else
             return self:GetSymbol(CurrentNode.Token.Value)
         end
     elseif (CurrentNode.Token.Type == self.Tokens.NUM) then
         local VariableNode = CurrentNode.NextNode.Token;
-        self:SetSymbol(VariableNode.Value, VariableNode.Type)
+        self:SetSymbol(VariableNode.Value, self.Tokens.NUM, "VARIABLE")
         return self:GetSymbol(VariableNode.Value)
-    end
-end
-
-function CSymbolTable:ArithmeticEvaluator(CurrentNode)
-    if (CurrentNode == nil or CurrentNode.Token == nil) then
-        return 0
-    elseif (CurrentNode.Token.Type == self.Lexer.Tokens.ADD) then
-        if (CurrentNode.NextNode) then
-            return self:Interpret(CurrentNode.NextNode)
+    elseif (CurrentNode.Token.Type == self.Tokens.ADD or CurrentNode.Token.Type == self.Tokens.MUL or CurrentNode.Token.Type == self.Tokens.MIN or CurrentNode.Token.Type == self.Tokens.DIV) then
+        local LeftSide = self:BuildSymbolTable(CurrentNode.LeftNode)
+        local RightSide = self:BuildSymbolTable(CurrentNode.LeftNode)
+        if (LeftSide.Type == self.Tokens.NUM and RightSide.Type == self.Tokens.NUM) then
+            return LeftSide
         else
-            return self:Interpret(CurrentNode.LeftNode) + self:Interpret(CurrentNode.RightNode)
+            return { Name = nil, Type = self.Tokens.EOF }
         end
-    elseif (CurrentNode.Token.Type == self.Lexer.Tokens.MIN) then
-        if (CurrentNode.NextNode) then
-            return -self:Interpret(CurrentNode.NextNode)
-        else
-            return self:Interpret(CurrentNode.LeftNode) - self:Interpret(CurrentNode.RightNode)
-        end
-    elseif (CurrentNode.Token.Type == self.Lexer.Tokens.MUL) then
-        return self:Interpret(CurrentNode.LeftNode) * self:Interpret(CurrentNode.RightNode)
-    elseif (CurrentNode.Token.Type == self.Lexer.Tokens.DIV) then
-        return self:Interpret(CurrentNode.LeftNode) / self:Interpret(CurrentNode.RightNode)
-    elseif (tonumber(CurrentNode.Token.Value)) then
-        return tonumber(CurrentNode.Token.Value)
-    elseif (CurrentNode.Token.Type == self.Lexer.Tokens.VAR) then
-        return self.VariableTable[CurrentNode.Token.Value].Expr
-    elseif (CurrentNode.Token.Type == self.Lexer.Tokens.NUM) then
-        return CurrentNode.NextNode.Token.Value
+    elseif (CurrentNode.Token.Type == self.Tokens.INTEGER) then
+        local VariableNode = CurrentNode.Token
+        self:SetSymbol(VariableNode.Value, self.Tokens.NUM, "NUMBER")
+        return self:GetSymbol(VariableNode.Value)
     end
 end
 

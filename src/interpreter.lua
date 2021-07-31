@@ -10,7 +10,7 @@ function CInterpreter:new(LexerInput)
     setmetatable(NewInterpreter, self)
     NewInterpreter.Lexer = CLexer:new(LexerInput)
     NewInterpreter.Parser = CParser:new(NewInterpreter.Lexer)
-    NewInterpreter.SymbolTable = CSymbolTable:new(NewInterpreter.Lexer.Tokens)
+    NewInterpreter.SymbolTable = CSymbolTable:new(NewInterpreter.Lexer.Tokens, self.VariableTable)
     self.__index = self
     return NewInterpreter
 end
@@ -47,7 +47,7 @@ function CInterpreter:Interpret(CurrentNode)
     elseif (tonumber(CurrentNode.Token.Value)) then
         return tonumber(CurrentNode.Token.Value)
     elseif (CurrentNode.Token.Type == self.Lexer.Tokens.VAR) then
-        return self.VariableTable[CurrentNode.Token.Value].Expr
+        return self.VariableTable[CurrentNode.Token.Value]
     elseif (CurrentNode.Token.Type == self.Lexer.Tokens.NUM) then
         return CurrentNode.NextNode.Token.Value
     end
@@ -60,9 +60,9 @@ function CInterpreter:Execute()
         self.SymbolTable:BuildSymbolTable(Root[i])
     end
 
-    --for i = 1, #Root do
-    --    self:Interpret(Root[i])
-    --end
+    for i = 1, #Root do
+        self:Interpret(Root[i])
+    end
 end
 
 return { CInterpreter }
