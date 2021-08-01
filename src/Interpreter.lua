@@ -95,13 +95,14 @@ function CInterpreter:MainEvaluator(CurrentNode)
         elseif (Condition == true) then
             return self:Interpret(CurrentNode.LeftNode)
         else
-            error("ERROR")
+            return 0
         end
     elseif (CurrentNode.Token.Type == self.Tokens.GREATER) then
-        local Symbol = CurrentNode.Token.Value
-        if (Symbol == ">") then
-            return (self:ArithmeticEvaluator(Symbol.RightNode) > self:ArithmeticEvaluator(Symbol.LeftNode))
-        end
+        return self:ArithmeticEvaluator(CurrentNode.LeftNode) > self:ArithmeticEvaluator(CurrentNode.RightNode)
+    elseif (CurrentNode.Token.Type == self.Tokens.LESSER) then
+        return self:ArithmeticEvaluator(CurrentNode.LeftNode) < self:ArithmeticEvaluator(CurrentNode.RightNode)
+    elseif (CurrentNode.Token.Type == self.Tokens.EQUALS) then
+        return (self:ArithmeticEvaluator(CurrentNode.LeftNode) == self:ArithmeticEvaluator(CurrentNode.RightNode))
     end
 end
 
@@ -112,7 +113,7 @@ function CInterpreter:Interpret(Root)
 end
 
 function CInterpreter:Execute()
-    Root = self.Parser:Program()
+    local Root = self.Parser:Program()
 
     for i = 1, #Root do
         self.SymbolTable:Evaluate(Root[i])

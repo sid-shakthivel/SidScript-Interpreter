@@ -78,6 +78,11 @@ function CLexer:GetNextToken()
         Character = self.Input:sub(self.CurrentPosition, self.CurrentPosition)
     end
 
+    if (self:Peek() == '=' and Character == '=') then
+        self.CurrentPosition = self.CurrentPosition + 1
+        return CToken:new('==', self.Tokens.EQUALS)
+    end
+
     SingleCharacterCases = {
         ['+'] = function()
             return CToken:new('+', self.Tokens.ADD)
@@ -104,17 +109,13 @@ function CLexer:GetNextToken()
             return CToken:new(';', self.Tokens.SEMI)
         end,
         ['='] = function()
-            if (self:Peek() == '=') then
-                return CToken:new('=', self.Tokens.EQUALS)
-            else
-                return CToken:new('=', self.Tokens.ASSIGN)
-            end
+            return CToken:new('=', self.Tokens.ASSIGN)
         end,
         ['>'] = function()
             return CToken:new('>', self.Tokens.GREATER)
         end,
         ['<'] = function()
-            return CToken:new('<', self.Tokens.LOWER)
+            return CToken:new('<', self.Tokens.LESSER)
         end,
         [':'] = function()
             return CToken:new(':', self.Tokens.COLON)

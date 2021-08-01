@@ -59,7 +59,7 @@ function CParser:IfElseStatement()
         self:SetNextToken()
         return CAST.CTernaryNode:new(If, Branch, Conditional, self:Statements())
     else
-        return CAST.CTernaryNode:new(If, Condition, Branch, nil)
+        return CAST.CTernaryNode:new(If, Branch, Conditional, nil)
     end
 end
 
@@ -67,6 +67,9 @@ function CParser:Conditional()
     self:SetNextToken()
     local Condition = self:Value()
     self:SetNextToken()
+    if (self.CurrentToken.Type == self.Tokens.EQUALS) then
+        self.Lexer.CurrentPosition = self.Lexer.CurrentPosition + 1
+    end
     return CAST.CBinaryNode:new(self.CurrentToken, Condition, self:Value())
 end
 
