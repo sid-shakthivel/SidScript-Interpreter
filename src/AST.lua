@@ -1,5 +1,4 @@
 CAST = {}
-CAST.CBinaryNode = { Token, LeftNode, RightNode }
 
 CAST.CProgramNode = { Children }
 
@@ -11,12 +10,12 @@ function CAST.CProgramNode:new()
     return NewNode
 end
 
-function CAST.CBinaryNode:new(Token, LeftNode, RightNode)
+CAST.CNode = { Token }
+
+function CAST.CNode:new(Token)
     NewNode = {}
     setmetatable(NewNode, self)
     NewNode.Token = Token
-    NewNode.LeftNode = LeftNode or nil
-    NewNode.RightNode = RightNode or nil
     self.__index = self
     return NewNode
 end
@@ -32,12 +31,27 @@ function CAST.CUnaryNode:new(Token, NextNode)
     return NewNode
 end
 
-CAST.CNode = { Token }
+CAST.CBinaryNode = { Token, LeftNode, RightNode }
 
-function CAST.CNode:new(Token)
+function CAST.CBinaryNode:new(Token, LeftNode, RightNode)
     NewNode = {}
     setmetatable(NewNode, self)
     NewNode.Token = Token
+    NewNode.LeftNode = LeftNode or nil
+    NewNode.RightNode = RightNode or nil
+    self.__index = self
+    return NewNode
+end
+
+CAST.CTernaryNode = { Token, LeftNode, CentreNode, RightNode }
+
+function CAST.CTernaryNode:new(Token, LeftNode, CentreNode, RightNode)
+    NewNode = {}
+    setmetatable(NewNode, self)
+    NewNode.Token = Token
+    NewNode.LeftNode = LeftNode or nil
+    NewNode.CentreNode = CentreNode or nil
+    NewNode.RightNode = RightNode or nil
     self.__index = self
     return NewNode
 end

@@ -80,21 +80,41 @@ function CInterpreter:ArithmeticEvaluator(CurrentNode)
     elseif (CurrentNode.Token.Type == self.Tokens.NUM_TYPE) then
         return CurrentNode.NextNode.Token.Value
     elseif (CurrentNode.Token.Type == self.Tokens.NUM) then
-        print("HERE?")
         return CurrentNode.Token.Value
     end
 end
 
 function CInterpreter:Execute()
     Root = self.Parser:Program()
+    print(Root[1].Token.Value)
+    print(Root[1].LeftNode.NextNode.Token.Value)
+    print(Root[1].RightNode.Token.Value)
 
-    for i = 1, #Root do
-        self.SymbolTable:Evaluate(Root[i])
-    end
+    print(Root[2].Token.Value)
+    print(Root[2].LeftNode.NextNode.Token.Value)
+    print(Root[2].RightNode.Token.Value)
 
-    for i = 1, #Root do
-        self:Interpret(Root[i])
-    end
+    print(Root[3].Token.Value)
+
+    print(Root[3].LeftNode[1].Token.Value)
+    print(Root[3].LeftNode[1].LeftNode.Token.Value)
+    print(Root[3].LeftNode[1].RightNode.Token.Value)
+
+    print(Root[3].RightNode[1].Token.Value)
+    print(Root[3].RightNode[1].LeftNode.Token.Value)
+    print(Root[3].RightNode[1].RightNode.Token.Value)
+
+    print(Root[3].CentreNode.Token.Value)
+    print(Root[3].CentreNode.RightNode.Token.Value)
+    print(Root[3].CentreNode.LeftNode.Token.Value)
+
+    --for i = 1, #Root do
+    --    self.SymbolTable:Evaluate(Root[i])
+    --end
+
+    --for i = 1, #Root do
+    --    self:Interpret(Root[i])
+    --end
 end
 
 return { CInterpreter }

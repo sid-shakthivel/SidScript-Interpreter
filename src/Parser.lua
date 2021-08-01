@@ -13,14 +13,26 @@ end
 
 function CParser:Program()
     self:SetNextToken()
-    return self:Statements()
+    if (self.CurrentToken.Type ~= self.Tokens.START) then
+        error("ERROR: PROGRAM MUST START WITH START KEYWORD")
+    else
+        return self:Statements()
+    end
 end
 
 function CParser:Statements()
-    Statements = {}
+    local Statements = {}
     while true do
+        self:SetNextToken()
+        if (self.CurrentToken.Type == self.Tokens.LBRACES) then
+            self:SetNextToken()
+        end
         table.insert(Statements, (self:Statement()))
-        if (self.CurrentToken.Type ~= self.Tokens.SEMI) then
+        if (self.CurrentToken.Type == self.Tokens.SEMI) then
+            ;
+        elseif (self.CurrentToken.Type == self.Tokens.FINISH) then
+            break
+        elseif (self.CurrentToken.Type == self.Tokens.RBRACES) then
             break
         end
     end
@@ -28,16 +40,42 @@ function CParser:Statements()
 end
 
 function CParser:Statement()
-    self:SetNextToken()
-    if (self.CurrentToken.Type == self.Tokens.NUM_TYPE or self.CurrentToken.Type == self.Tokens.STR_TYPE or self.CurrentToken.Type == self.Tokens.BOOL_TYPE or self.CurrentToken.Type == self.Tokens.VAR) then
+    if (self.CurrentToken.Type == self.Tokens.VAR or self.CurrentToken.Type == self.Tokens.NUM_TYPE or self.CurrentToken.Type == self.Tokens.STR_TYPE or self.CurrentToken.Type == self.Tokens.BOOL_TYPE) then
         return self:Assignment()
+    elseif (self.CurrentToken.Type == self.Tokens.IF) then
+        return self:IfElseStatement()
+    else
+        return nil
     end
+end
+
+function CParser:IfElseStatement()
+    local If = self.CurrentToken
+    local Conditional = self:Conditional()
+    self:SetNextToken()
+    local Branch = self:Statements()
+    self:SetNextToken()
+    if (self.CurrentToken.Type == self.Tokens.ELSE) then
+        self:SetNextToken()
+        return CAST.CTernaryNode:new(If, Branch, Conditional, self:Statements())
+    else
+        return CAST.CTernaryNode:new(If, Condition, Branch, nil)
+    end
+end
+
+function CParser:Conditional()
+    self:SetNextToken()
+    local Condition = self:Value()
+    self:SetNextToken()
+    return CAST.CBinaryNode:new(self.CurrentToken, Condition, self:Value())
 end
 
 function CParser:Assignment()
     local Node = self:Variable()
     self:SetNextToken()
-    Node = CAST.CBinaryNode:new(self.CurrentToken, Node, self:Value())
+    local Operation = self.CurrentToken
+    local Test = self:Value()
+    Node = CAST.CBinaryNode:new(Operation, Node, Test)
     return Node
 end
 
@@ -68,6 +106,7 @@ function CParser:Expr()
         if (self.CurrentToken.Type == self.Tokens.ADD or self.CurrentToken.Type == self.Tokens.MIN) then
             Node = CAST.CBinaryNode:new(self.CurrentToken, Node, self:Term())
         else
+            self.Lexer.CurrentPosition = self.Lexer.CurrentPosition - 1
             break
         end
     end

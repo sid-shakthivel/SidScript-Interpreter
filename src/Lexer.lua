@@ -30,7 +30,15 @@ CLexer.Tokens = {
     BOOL_TYPE = "BOOL_TYPE",
     NUM = "NUM",
     STR = "STR",
-    BOOl = "BOOL"
+    BOOl = "BOOL",
+    IF = "IF",
+    ELSE = "ELSE",
+    GREATER = "GREATER",
+    LESSER = "LESSER",
+    EQUALS = "EQUALS",
+    COLON = "COLON",
+    RBRACES = "RBRACES",
+    LBRACES = "LBRACES"
 }
 
 function CLexer:new(input)
@@ -57,11 +65,15 @@ function CLexer:GetNumber()
     return tonumber(Digits)
 end
 
+function CLexer:Peek()
+    return self.Input:sub((self.CurrentPosition+1), (self.CurrentPosition+1))
+end
+
 function CLexer:GetNextToken()
     local Character = self.Input:sub(self.CurrentPosition, self.CurrentPosition)
     local Token
 
-    if (Character == ' ') then
+    while Character == ' ' do
         self.CurrentPosition = self.CurrentPosition + 1
         Character = self.Input:sub(self.CurrentPosition, self.CurrentPosition)
     end
@@ -92,7 +104,26 @@ function CLexer:GetNextToken()
             return CToken:new(';', self.Tokens.SEMI)
         end,
         ['='] = function()
-            return CToken:new('=', self.Tokens.ASSIGN)
+            if (self:Peek() == '=') then
+                return CToken:new('=', self.Tokens.EQUALS)
+            else
+                return CToken:new('=', self.Tokens.ASSIGN)
+            end
+        end,
+        ['>'] = function()
+            return CToken:new('>', self.Tokens.GREATER)
+        end,
+        ['<'] = function()
+            return CToken:new('<', self.Tokens.LOWER)
+        end,
+        [':'] = function()
+            return CToken:new(':', self.Tokens.COLON)
+        end,
+        ['{'] = function()
+            return CToken:new('{', self.Tokens.LBRACES)
+        end,
+        ['}'] = function()
+            return CToken:new('}', self.Tokens.RBRACES)
         end
     }
 
@@ -112,11 +143,17 @@ function CLexer:GetNextToken()
         ["bool"] = function()
             return CToken:new("BOOL_TYPE", self.Tokens.BOOL_TYPE)
         end,
-        ["true"] = function ()
+        ["true"] = function()
             return CToken:new("true", self.Tokens.BOOL)
         end,
-        ["false"] = function ()
+        ["false"] = function()
             return CToken:new("false", self.Tokens.BOOL)
+        end,
+        ["if"] = function()
+            return CToken:new("if", self.Tokens.IF)
+        end,
+        ["else"] = function()
+            return CToken:new("else", self.Tokens.ELSE)
         end
     }
 
