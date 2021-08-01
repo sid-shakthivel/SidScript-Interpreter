@@ -24,36 +24,6 @@ function CInterpreter:GetVariable(Name)
     return self.VariableTable[Name]
 end
 
-function CInterpreter:Interpret(CurrentNode)
-    if (CurrentNode == nil or CurrentNode.Token == nil) then
-        return 0
-    elseif (CurrentNode.Token.Type == self.Tokens.ASSIGN) then
-        local VariableType = CurrentNode.LeftNode.Token.Type
-        local Variable = self:Interpret(CurrentNode.LeftNode)
-        if (VariableType == VAR) then
-            VariableType = self.SymbolTable:GetVariable(Variable.Value).Type
-        end
-        local Value
-        if (VariableType == self.Tokens.NUM_TYPE) then
-            Value = self:ArithmeticEvaluator(CurrentNode.RightNode)
-        elseif (VariableType == self.Tokens.STR_TYPE) then
-            Value = self:Interpret(CurrentNode.RightNode).Value
-        elseif (VariableType == self.Tokens.BOOL_TYPE) then
-            Value = self:Interpret(CurrentNode.RightNode).Value
-        end
-        self:SetVariable(Variable.Value, Value)
-    elseif (CurrentNode.Token.Type == self.Tokens.NUM_TYPE or CurrentNode.Token.Type == self.Tokens.STR_TYPE or CurrentNode.Token.Type == self.Tokens.BOOL_TYPE) then
-        return self:Interpret(CurrentNode.NextNode)
-    elseif (CurrentNode.Token.Type == self.Tokens.VAR) then
-        return CurrentNode.Token
-    elseif (CurrentNode.Token.Type == self.Tokens.STR) then
-        return CurrentNode.Token
-    elseif (CurrentNode.Token.Type == self.Tokens.BOOL) then
-        return CurrentNode.Token
-    end
-end
-
-
 function CInterpreter:ArithmeticEvaluator(CurrentNode)
     if (CurrentNode == nil or CurrentNode.Token == nil) then
         return 0
@@ -84,37 +54,71 @@ function CInterpreter:ArithmeticEvaluator(CurrentNode)
     end
 end
 
+function CInterpreter:VariableEvaluator(CurrentNode)
+    if (CurrentNode == nil or CurrentNode.Token == nil) then
+        return 0
+    elseif (CurrentNode.Token.Type == self.Tokens.ASSIGN) then
+        local VariableType = CurrentNode.LeftNode.Token.Type
+        local Variable = self:VariableEvaluator(CurrentNode.LeftNode)
+        if (VariableType == self.Tokens.VAR) then
+            VariableType = self.SymbolTable:GetSymbol(Variable.Value).Type
+        end
+        local Value
+        if (VariableType == self.Tokens.NUM_TYPE) then
+            Value = self:ArithmeticEvaluator(CurrentNode.RightNode)
+        elseif (VariableType == self.Tokens.STR_TYPE) then
+            Value = self:VariableEvaluator(CurrentNode.RightNode).Value
+        elseif (VariableType == self.Tokens.BOOL_TYPE) then
+            Value = self:VariableEvaluator(CurrentNode.RightNode).Value
+        end
+        self:SetVariable(Variable.Value, Value)
+    elseif (CurrentNode.Token.Type == self.Tokens.NUM_TYPE or CurrentNode.Token.Type == self.Tokens.STR_TYPE or CurrentNode.Token.Type == self.Tokens.BOOL_TYPE) then
+        return self:VariableEvaluator(CurrentNode.NextNode)
+    elseif (CurrentNode.Token.Type == self.Tokens.VAR) then
+        return CurrentNode.Token
+    elseif (CurrentNode.Token.Type == self.Tokens.STR) then
+        return CurrentNode.Token
+    elseif (CurrentNode.Token.Type == self.Tokens.BOOL) then
+        return CurrentNode.Token
+    end
+end
+
+function CInterpreter:MainEvaluator(CurrentNode)
+    if (CurrentNode == nil or CurrentNode.Token == nil) then
+        return 0
+    elseif (CurrentNode.Token.Type == self.Tokens.ASSIGN) then
+        return self:VariableEvaluator(CurrentNode)
+    elseif (CurrentNode.Token.Type == self.Tokens.IF) then
+        local Condition = self:MainEvaluator(CurrentNode.CentreNode)
+        if (Condition == false) then
+            return self:Interpret(CurrentNode.RightNode)
+        elseif (Condition == true) then
+            return self:Interpret(CurrentNode.LeftNode)
+        else
+            error("ERROR")
+        end
+    elseif (CurrentNode.Token.Type == self.Tokens.GREATER) then
+        local Symbol = CurrentNode.Token.Value
+        if (Symbol == ">") then
+            return (self:ArithmeticEvaluator(Symbol.RightNode) > self:ArithmeticEvaluator(Symbol.LeftNode))
+        end
+    end
+end
+
+function CInterpreter:Interpret(Root)
+    for i = 1, #Root do
+        self:MainEvaluator(Root[i])
+    end
+end
+
 function CInterpreter:Execute()
     Root = self.Parser:Program()
-    print(Root[1].Token.Value)
-    print(Root[1].LeftNode.NextNode.Token.Value)
-    print(Root[1].RightNode.Token.Value)
 
-    print(Root[2].Token.Value)
-    print(Root[2].LeftNode.NextNode.Token.Value)
-    print(Root[2].RightNode.Token.Value)
+    for i = 1, #Root do
+        self.SymbolTable:Evaluate(Root[i])
+    end
 
-    print(Root[3].Token.Value)
-
-    print(Root[3].LeftNode[1].Token.Value)
-    print(Root[3].LeftNode[1].LeftNode.Token.Value)
-    print(Root[3].LeftNode[1].RightNode.Token.Value)
-
-    print(Root[3].RightNode[1].Token.Value)
-    print(Root[3].RightNode[1].LeftNode.Token.Value)
-    print(Root[3].RightNode[1].RightNode.Token.Value)
-
-    print(Root[3].CentreNode.Token.Value)
-    print(Root[3].CentreNode.RightNode.Token.Value)
-    print(Root[3].CentreNode.LeftNode.Token.Value)
-
-    --for i = 1, #Root do
-    --    self.SymbolTable:Evaluate(Root[i])
-    --end
-
-    --for i = 1, #Root do
-    --    self:Interpret(Root[i])
-    --end
+    self:Interpret(Root)
 end
 
 return { CInterpreter }

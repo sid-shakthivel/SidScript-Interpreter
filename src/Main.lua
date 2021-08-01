@@ -17,6 +17,5 @@ FINISH      \z
 Interpreter = CInterpreter:new(Program)
 Interpreter:Execute()
 
---print(Interpreter.VariableTable["mNumber"])
---print(Interpreter.VariableTable["b"])
---print(Interpreter.VariableTable["jim"])
+print("X IS " .. Interpreter.VariableTable["x"])
+print("Y IS " .. Interpreter.VariableTable["y"])
