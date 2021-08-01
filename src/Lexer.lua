@@ -79,7 +79,7 @@ function CLexer:GetNextToken()
     end
 
     if (self:Peek() == '=' and Character == '=') then
-        self.CurrentPosition = self.CurrentPosition + 1
+        self.CurrentPosition = self.CurrentPosition + 2
         return CToken:new('==', self.Tokens.EQUALS)
     end
 
@@ -165,13 +165,14 @@ function CLexer:GetNextToken()
             Token = SingleCharacterCases[Character]()
         else
             local OldPosition = self.CurrentPosition
-            local NextSpace = string.find(self.Input, " ", self.CurrentPosition) or #self.Input + 1
+            local NextSpace = string.find(self.Input, " ", self.CurrentPosition) or string.find(self.Input, ";", self.CurrentPosition) or #self.Input - 1
             local Result = string.gsub(self.Input:sub(OldPosition, NextSpace-1), ";", "")
+            --Result = string.gsub(Result:sub(OldPosition, NextSpace-1), "`", "")
             if (MultiCharacterCases[Result]) then
                 Token = MultiCharacterCases[Result]()
             else
                 if (Result:sub(1, 1) == "`") then
-                    Token = CToken:new(string.gsub(self.Input:sub(OldPosition, NextSpace), "`", ""), self.Tokens.STR)
+                    Token = CToken:new(string.gsub(Result, '`', ""), self.Tokens.STR)
                 else
                     Token = CToken:new(Result, self.Tokens.VAR)
                 end
