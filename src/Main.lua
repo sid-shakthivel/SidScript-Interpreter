@@ -2,9 +2,9 @@ local CInterpreter = require("src.Interpreter")[1]
 
 Program = " \z
 START       \z
-num x = 5;  \z
+str x = `hello`;  \z
 num y = 23; \z
-if (x == 5) {  \z
+if (x == `hello`) {  \z
     y = 0;  \z
 }           \z
 else {      \z

@@ -167,12 +167,12 @@ function CLexer:GetNextToken()
             local OldPosition = self.CurrentPosition
             local NextSpace = string.find(self.Input, " ", self.CurrentPosition) or string.find(self.Input, ";", self.CurrentPosition) or #self.Input - 1
             local Result = string.gsub(self.Input:sub(OldPosition, NextSpace-1), ";", "")
-            --Result = string.gsub(Result:sub(OldPosition, NextSpace-1), "`", "")
             if (MultiCharacterCases[Result]) then
                 Token = MultiCharacterCases[Result]()
             else
                 if (Result:sub(1, 1) == "`") then
-                    Token = CToken:new(string.gsub(Result, '`', ""), self.Tokens.STR)
+                    local NextStringLiteral = string.find(Result:sub(2, #Result), "`")
+                    Token = CToken:new(string.sub(Result, 2, NextStringLiteral), self.Tokens.STR)
                 else
                     Token = CToken:new(Result, self.Tokens.VAR)
                 end
