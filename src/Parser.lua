@@ -35,6 +35,7 @@ function CParser:Statements()
         elseif (self.CurrentToken.Type == self.Tokens.RBRACES) then
             break
         else
+            print(self.CurrentToken.Value)
             error("ERROR: SEMI COLON MUST FOLLOW EACH STATEMENT")
         end
     end
@@ -89,6 +90,7 @@ function CParser:Assign()
     local Node = self:Variable()
     self:SetNextToken()
     Node = CAST.CBinaryNode:new(self.CurrentToken, Node, self:Value())
+    self:SetNextToken()
     return Node
 end
 

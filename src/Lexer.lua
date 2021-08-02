@@ -30,7 +30,7 @@ CLexer.Tokens = {
     BOOL_TYPE = "BOOL_TYPE",
     NUM = "NUM",
     STR = "STR",
-    BOOl = "BOOL",
+    BOOL = "BOOL",
     IF = "IF",
     ELSE = "ELSE",
     GREATER = "GREATER",
@@ -133,7 +133,7 @@ function CLexer:GetNextToken()
         ["START"] = function()
             return CToken:new("START", self.Tokens.START)
         end,
-        ["FINISH"] = function()
+        ["FINISH "] = function()
             return CToken:new("FINISH", self.Tokens.FINISH)
         end,
         ["num"] = function()
@@ -169,21 +169,41 @@ function CLexer:GetNextToken()
             Token = SingleCharacterCases[Character]()
         else
             local OldPosition = self.CurrentPosition
-            local NextSpace = string.find(self.Input, " ", self.CurrentPosition) or #self.Input - 1
-            local Result = string.gsub(string.gsub(self.Input:sub(OldPosition, NextSpace-1), ";", ""), "%)", "")
+            --local NextSpace = string.find(self.Input, ")", self.CurrentPosition) or string.find(self.Input, " ", self.CurrentPosition) or string.find(self.Input, ";", self.CurrentPosition) or #self.Input - 1
+
+            local NextParenthesis = self.Input:find(")", self.CurrentPosition) or #self.Input - 1
+            local NextSpace = self.Input:find(" ", self.CurrentPosition) or #self.Input - 1
+            local NextSemi = self.Input:find(";", self.CurrentPosition) or #self.Input - 1
+            local FinalCharacter
+            local Result
+
+            if (NextSpace < NextSemi and NextSpace < NextParenthesis) then
+                Result = self.Input:sub(OldPosition, NextSpace)
+                FinalCharacter = NextSpace
+            elseif (NextSemi < NextSpace and NextSemi < NextParenthesis) then
+                NextSemi = NextSemi - 1
+                Result = self.Input:sub(OldPosition, NextSemi)
+                FinalCharacter = NextSemi
+            else
+                NextParenthesis = NextParenthesis - 1
+                Result = self.Input:sub(OldPosition, NextParenthesis)
+                FinalCharacter = NextParenthesis
+            end
+
             if (MultiCharacterCases[Result]) then
                 Token = MultiCharacterCases[Result]()
             else
                 if (Result:sub(1, 1) == "`") then
-                    local NextStringLiteral = string.find(self.Input, "`", NextSpace)
+                    local NextStringLiteral = string.find(self.Input, "`", FinalCharacter)
                     Result = string.sub(self.Input, self.CurrentPosition, NextStringLiteral)
                     Token = CToken:new(string.gsub(Result, "`", ""), self.Tokens.STR)
-                    NextSpace = NextStringLiteral
+                    FinalCharacter = NextStringLiteral
                 else
                     Token = CToken:new(Result, self.Tokens.VAR)
                 end
             end
-            self.CurrentPosition = NextSpace
+
+            self.CurrentPosition = FinalCharacter
         end
     end
 
