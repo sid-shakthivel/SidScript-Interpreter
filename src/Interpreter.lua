@@ -99,7 +99,6 @@ function CInterpreter:MainEvaluator(CurrentNode)
         elseif (VariableType == self.Tokens.BOOL_TYPE) then
             Value = self:TypeEvaluator(CurrentNode.RightNode)
         end
-
         self:SetVariable(Variable, Value)
     elseif (CurrentNode.Token.Type == self.Tokens.IF) then
         local Condition = self:MainEvaluator(CurrentNode.CentreNode)
@@ -110,6 +109,9 @@ function CInterpreter:MainEvaluator(CurrentNode)
         else
             return 0
         end
+    elseif (CurrentNode.Token.Type == self.Tokens.PRINT) then
+        print(self:TypeEvaluator(CurrentNode.NextNode))
+        return 0
     elseif (CurrentNode.Token.Type == self.Tokens.GREATER) then
         return self:TypeEvaluator(CurrentNode.LeftNode) > self:TypeEvaluator(CurrentNode.RightNode)
     elseif (CurrentNode.Token.Type == self.Tokens.LESSER) then
@@ -127,18 +129,6 @@ end
 
 function CInterpreter:Execute()
     local Root = self.Parser:Program()
-
-    --print(Root[1].RightNode.Token.Value)
-    --print(Root[1].LeftNode.Token.Value)
-    --print(Root[1].LeftNode.NextNode.Token.Value)
-    --
-    --print(Root[2].RightNode.Token.Value)
-    --print(Root[2].LeftNode.Token.Value)
-    --print(Root[2].LeftNode.NextNode.Token.Value)
-    --
-    --print(Root[3].RightNode.Token.Value)
-    --print(Root[3].LeftNode.Token.Value)
-    --print(Root[3].LeftNode.NextNode.Token.Value)
 
     for i = 1, #Root do
         self.SymbolTable:Evaluate(Root[i])

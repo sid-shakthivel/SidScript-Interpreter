@@ -34,6 +34,8 @@ function CParser:Statements()
             break
         elseif (self.CurrentToken.Type == self.Tokens.RBRACES) then
             break
+        else
+            error("ERROR: SEMI COLON MUST FOLLOW EACH STATEMENT")
         end
     end
     return Statements
@@ -44,16 +46,29 @@ function CParser:Statement()
         return self:Assign()
     elseif (self.CurrentToken.Type == self.Tokens.IF) then
         return self:IfElse()
+    elseif (self.CurrentToken.Type == self.Tokens.PRINT) then
+        return self:Print()
     else
         return nil
     end
 end
 
+function CParser:Print()
+    local Print = self.CurrentToken
+    local Test = self:Value()
+    self:SetNextToken()
+    return CAST.CUnaryNode:new(Print, Test)
+end
+
+function CParser:While()
+    local While = self.CurrentToken
+    local Condition = self:Condition()
+    return CAST.CBinaryNode:new(While, Condition, self:Statements())
+end
+
 function CParser:IfElse()
     local If = self.CurrentToken
-    self:SetNextToken()
     local Condition = self:Condition()
-    self:SetNextToken()
     local Branch = self:Statements()
     self:SetNextToken()
     if (self.CurrentToken.Type == self.Tokens.ELSE) then
@@ -94,8 +109,10 @@ function CParser:Expr()
     local Node = self:Term()
     while true do
         self:SetNextToken()
+        local Operation = self.CurrentToken
         if (self.CurrentToken.Type == self.Tokens.ADD or self.CurrentToken.Type == self.Tokens.MIN) then
-            Node = CAST.CBinaryNode:new(self.CurrentToken, Node, self:Term())
+            self:SetNextToken()
+            Node = CAST.CBinaryNode:new(Operation, Node, self:Term())
         else
             self.Lexer.CurrentPosition = self.Lexer.CurrentPosition - 1
             break
@@ -108,8 +125,10 @@ function CParser:Term()
     local Node = self:Factor()
     while true do
         self:SetNextToken()
+        local Operation = self.CurrentToken
         if (self.CurrentToken.Type == self.Tokens.MUL or self.CurrentToken.Type == self.Tokens.DIV) then
-            Node = CAST.CBinaryNode:new(self.CurrentToken, Node, self:Factor())
+            self:SetNextToken()
+            Node = CAST.CBinaryNode:new(Operation, Node, self:Factor())
         else
             self.Lexer.CurrentPosition = self.Lexer.CurrentPosition - 1
             break
@@ -119,7 +138,6 @@ function CParser:Term()
 end
 
 function CParser:Factor()
-    --self:SetNextToken()
     if (self.CurrentToken.Type == self.Tokens.NUM) then
         return CAST.CNode:new(self.CurrentToken)
     elseif (self.CurrentToken.Type == self.Tokens.LPAREN) then
@@ -128,7 +146,7 @@ function CParser:Factor()
         local Operator = CAST.CUnaryNode:new(self.CurrentToken, self:Factor())
         return Operator
     else
-        error("ERROR: INITIALISING VARIABLE WITH INCOMPATIBLE TYPE")
+        error("ERROR")
     end
 end
 

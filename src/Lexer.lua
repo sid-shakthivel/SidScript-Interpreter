@@ -38,7 +38,8 @@ CLexer.Tokens = {
     EQUALS = "EQUALS",
     COLON = "COLON",
     RBRACES = "RBRACES",
-    LBRACES = "LBRACES"
+    LBRACES = "LBRACES",
+    PRINT = "PRINT"
 }
 
 function CLexer:new(input)
@@ -155,6 +156,9 @@ function CLexer:GetNextToken()
         end,
         ["else"] = function()
             return CToken:new("else", self.Tokens.ELSE)
+        end,
+        ["print"] = function ()
+            return CToken:new("print", self.Tokens.PRINT)
         end
     }
 
@@ -165,14 +169,16 @@ function CLexer:GetNextToken()
             Token = SingleCharacterCases[Character]()
         else
             local OldPosition = self.CurrentPosition
-            local NextSpace = string.find(self.Input, " ", self.CurrentPosition) or string.find(self.Input, ";", self.CurrentPosition) or #self.Input - 1
-            local Result = string.gsub(self.Input:sub(OldPosition, NextSpace-1), ";", "")
+            local NextSpace = string.find(self.Input, " ", self.CurrentPosition) or #self.Input - 1
+            local Result = string.gsub(string.gsub(self.Input:sub(OldPosition, NextSpace-1), ";", ""), "%)", "")
             if (MultiCharacterCases[Result]) then
                 Token = MultiCharacterCases[Result]()
             else
                 if (Result:sub(1, 1) == "`") then
-                    local NextStringLiteral = string.find(Result:sub(2, #Result), "`")
-                    Token = CToken:new(string.sub(Result, 2, NextStringLiteral), self.Tokens.STR)
+                    local NextStringLiteral = string.find(self.Input, "`", NextSpace)
+                    Result = string.sub(self.Input, self.CurrentPosition, NextStringLiteral)
+                    Token = CToken:new(string.gsub(Result, "`", ""), self.Tokens.STR)
+                    NextSpace = NextStringLiteral
                 else
                     Token = CToken:new(Result, self.Tokens.VAR)
                 end
