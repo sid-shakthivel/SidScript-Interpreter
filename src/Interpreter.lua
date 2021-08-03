@@ -109,6 +109,15 @@ function CInterpreter:MainEvaluator(CurrentNode)
         else
             return 0
         end
+    elseif (CurrentNode.Token.Type == self.Tokens.WHILE) then
+        while (true) do
+            local Condition = self:MainEvaluator(CurrentNode.LeftNode)
+            if (Condition == true) then
+                self:Interpret(CurrentNode.RightNode)
+            else
+                return 0
+            end
+        end
     elseif (CurrentNode.Token.Type == self.Tokens.PRINT) then
         print(self:TypeEvaluator(CurrentNode.NextNode))
         return 0

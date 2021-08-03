@@ -39,7 +39,8 @@ CLexer.Tokens = {
     COLON = "COLON",
     RBRACES = "RBRACES",
     LBRACES = "LBRACES",
-    PRINT = "PRINT"
+    PRINT = "PRINT",
+    WHILE = "WHILE"
 }
 
 function CLexer:new(input)
@@ -133,7 +134,7 @@ function CLexer:GetNextToken()
         ["START"] = function()
             return CToken:new("START", self.Tokens.START)
         end,
-        ["FINISH "] = function()
+        ["FINISH"] = function()
             return CToken:new("FINISH", self.Tokens.FINISH)
         end,
         ["num"] = function()
@@ -159,6 +160,9 @@ function CLexer:GetNextToken()
         end,
         ["print"] = function ()
             return CToken:new("print", self.Tokens.PRINT)
+        end,
+        ["while"] = function()
+            return CToken:new("while", self.Tokens.WHILE)
         end
     }
 
@@ -169,7 +173,6 @@ function CLexer:GetNextToken()
             Token = SingleCharacterCases[Character]()
         else
             local OldPosition = self.CurrentPosition
-            --local NextSpace = string.find(self.Input, ")", self.CurrentPosition) or string.find(self.Input, " ", self.CurrentPosition) or string.find(self.Input, ";", self.CurrentPosition) or #self.Input - 1
 
             local NextParenthesis = self.Input:find(")", self.CurrentPosition) or #self.Input - 1
             local NextSpace = self.Input:find(" ", self.CurrentPosition) or #self.Input - 1
@@ -178,6 +181,7 @@ function CLexer:GetNextToken()
             local Result
 
             if (NextSpace < NextSemi and NextSpace < NextParenthesis) then
+                NextSpace = NextSpace - 1
                 Result = self.Input:sub(OldPosition, NextSpace)
                 FinalCharacter = NextSpace
             elseif (NextSemi < NextSpace and NextSemi < NextParenthesis) then

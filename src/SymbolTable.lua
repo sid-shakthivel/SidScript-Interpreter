@@ -57,9 +57,9 @@ function CSymbolTable:Evaluate(CurrentNode, CurrentType)
         self:SetSymbol(Variable.Value, CurrentNode.Token.Type, "VARIABLE")
         return self:GetSymbol(Variable.Value)
     elseif (CurrentNode.Token.Type == self.Tokens.ADD or CurrentNode.Token.Type == self.Tokens.MUL or CurrentNode.Token.Type == self.Tokens.MIN or CurrentNode.Token.Type == self.Tokens.DIV) then
-        local LeftNode = self:Evaluate(CurrentNode)
-        local RightNode = self:Evaluate(RightNode)
-        if (LeftNode.Type ~= NUM or RightNode.Type ~= NUM) then
+        local LeftNode = self:Evaluate(CurrentNode.LeftNode)
+        local RightNode = self:Evaluate(CurrentNode.RightNode)
+        if (LeftNode.Type ~= self.Tokens.NUM_TYPE or RightNode.Type ~= self.Tokens.NUM_TYPE) then
             error("ERROR: INITIALISING VARIABLE WITH INCOMPATIBLE TYPE")
         else
             return RightNode
@@ -69,9 +69,9 @@ function CSymbolTable:Evaluate(CurrentNode, CurrentType)
         self:SetSymbol(Variable.Value, self.Tokens.STR_TYPE, "STRING")
         return self:GetSymbol(Variable.Value)
     elseif (CurrentNode.Token.Type == self.Tokens.NUM) then
-        local Variable = CurrentNode.Token
-        self:SetSymbol(Variable.Value, self.Tokens.NUM_TYPE, "NUMBER")
-        return self:GetSymbol(Variable.Value)
+        local Number = CurrentNode.Token
+        self:SetSymbol(Number.Value, self.Tokens.NUM_TYPE, "NUMBER")
+        return self:GetSymbol(Number.Value)
     elseif (CurrentNode.Token.Type == self.Tokens.BOOL) then
         local Variable = CurrentNode.Token
         self:SetSymbol(Variable.Value, self.Tokens.BOOL_TYPE, "BOOLEAN")
