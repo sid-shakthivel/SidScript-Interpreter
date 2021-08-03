@@ -56,4 +56,18 @@ function CAST.CTernaryNode:new(Token, LeftNode, CentreNode, RightNode)
     return NewNode
 end
 
+CAST.CQuaternaryNode = { Token, LeftNode, CentreLeftNode, CentreRightNode, RightNode }
+
+function CAST.CQuaternaryNode:new(Token, LeftNode, CentreLeftNode, CentreRightNode, RightNode)
+    NewNode = {}
+    setmetatable(NewNode, self)
+    NewNode.Token = Token
+    NewNode.LeftNode = LeftNode or nil
+    NewNode.CentreLeftNode = CentreLeftNode or nil
+    NewNode.CentreRightNode = CentreRightNode or nil
+    NewNode.RightNode = RightNode or nil
+    self.__index = self
+    return NewNode
+end
+
 return CAST

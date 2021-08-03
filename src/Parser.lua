@@ -35,6 +35,7 @@ function CParser:Statements()
         elseif (self.CurrentToken.Type == self.Tokens.RBRACES) then
             break
         else
+            print(self.CurrentToken.Value)
             error("ERROR: SEMI COLON MUST FOLLOW EACH STATEMENT")
         end
     end
@@ -50,6 +51,8 @@ function CParser:Statement()
         return self:Print()
     elseif (self.CurrentToken.Type == self.Tokens.WHILE) then
         return self:While()
+    elseif (self.CurrentToken.Type == self.Tokens.FOR) then
+        return self:For()
     else
         return nil
     end
@@ -66,6 +69,18 @@ function CParser:While()
     local While = self.CurrentToken
     local Condition = self:Condition()
     return CAST.CBinaryNode:new(While, Condition, self:Statements())
+end
+
+function CParser:For()
+    local For = self.CurrentToken
+    self:SetNextToken()
+    local Variable = self:Assign()
+    local Condition = self:Condition()
+    self:SetNextToken()
+    self:SetNextToken()
+    local Increment = self:Expr()
+    --self:SetNextToken()
+    return CAST.CQuaternaryNode:new(For, Variable, Condition, Increment, self:Statements())
 end
 
 function CParser:IfElse()
@@ -148,11 +163,12 @@ function CParser:Factor()
     elseif (self.CurrentToken.Type == self.Tokens.LPAREN) then
         return self:Expr()
     elseif (self.CurrentToken.Type == self.Tokens.ADD or self.CurrentToken.Type == self.Tokens.MIN) then
+        self:SetNextToken()
         local Operator = CAST.CUnaryNode:new(self.CurrentToken, self:Factor())
         return Operator
     else
     --    Must be a variable
-        return CAST.CNode:new(self.CurrentToken)
+        return self:Variable()
     end
 end
 

@@ -1,24 +1,12 @@
 local CInterpreter = require("src.Interpreter")[1]
 local CLexer = require("src.Lexer")[1]
 
-Program1 = " \z
-START       \z
-num i = 1; \z
-while i < 10 { \z
+Program = "\z
+START \z
+for num i = 0; i < 10; ++i { \z
     print i; \z
-    i = i + 1; \z
 } \z
-FINISH      \z
-"
-
-Program = " \z
-START       \z
-num i = 1; \z
-while i < 10 { \z
-    print i; \z
-    i = i + 1; \z
-} \z
-FINISH      \z
+FINISH \z
 "
 
 Interpreter = CInterpreter:new(Program)
@@ -32,6 +20,20 @@ Interpreter:Execute()
 --print(Lexer:GetNextToken().Value)
 --print(Lexer:GetNextToken().Value)
 --print(Lexer:GetNextToken().Value)
+--print(Lexer:GetNextToken().Value)
+--print(Lexer:GetNextToken().Value)
+--print(Lexer:GetNextToken().Value)
+--print(Lexer:GetNextToken().Value)
+--print(Lexer:GetNextToken().Value)
+--print(Lexer:GetNextToken().Value)
+--print(Lexer:GetNextToken().Value)
+--print(Lexer:GetNextToken().Value)
+--print(Lexer:GetNextToken().Value)
+--print(Lexer:GetNextToken().Value)
+--print(Lexer:GetNextToken().Value)
+--print(Lexer:GetNextToken().Value)
+--print(Lexer:GetNextToken().Value)
+
 
 --print(Interpreter.VariableTable["i"])
 --print(Interpreter.VariableTable["y"])

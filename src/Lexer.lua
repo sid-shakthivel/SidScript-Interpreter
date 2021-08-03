@@ -40,7 +40,8 @@ CLexer.Tokens = {
     RBRACES = "RBRACES",
     LBRACES = "LBRACES",
     PRINT = "PRINT",
-    WHILE = "WHILE"
+    WHILE = "WHILE",
+    FOR = "FOR",
 }
 
 function CLexer:new(input)
@@ -163,6 +164,9 @@ function CLexer:GetNextToken()
         end,
         ["while"] = function()
             return CToken:new("while", self.Tokens.WHILE)
+        end,
+        ["for"] = function()
+            return CToken:new("for", self.Tokens.FOR)
         end
     }
 
@@ -174,9 +178,9 @@ function CLexer:GetNextToken()
         else
             local OldPosition = self.CurrentPosition
 
-            local NextParenthesis = self.Input:find(")", self.CurrentPosition) or #self.Input - 1
-            local NextSpace = self.Input:find(" ", self.CurrentPosition) or #self.Input - 1
-            local NextSemi = self.Input:find(";", self.CurrentPosition) or #self.Input - 1
+            local NextParenthesis = self.Input:find(")", self.CurrentPosition) or #self.Input
+            local NextSpace = self.Input:find(" ", self.CurrentPosition) or #self.Input
+            local NextSemi = self.Input:find(";", self.CurrentPosition) or #self.Input
             local FinalCharacter
             local Result
 

@@ -29,7 +29,7 @@ function CInterpreter:ArithmeticEvaluator(CurrentNode)
         return 0
     elseif (CurrentNode.Token.Type == self.Tokens.ADD) then
         if (CurrentNode.NextNode) then
-            return self:ArithmeticEvaluator(CurrentNode.NextNode)
+            return self:ArithmeticEvaluator(CurrentNode.NextNode) + 1
         else
             return self:ArithmeticEvaluator(CurrentNode.LeftNode) + self:ArithmeticEvaluator(CurrentNode.RightNode)
         end
@@ -46,6 +46,7 @@ function CInterpreter:ArithmeticEvaluator(CurrentNode)
     --elseif (tonumber(CurrentNode.Token.Value)) then
         --return tonumber(CurrentNode.Token.Value)
     elseif (CurrentNode.Token.Type == self.Tokens.VAR) then
+        --print(self:GetVariable(CurrentNode.Token.Value))
         return self:GetVariable(CurrentNode.Token.Value)
     --elseif (CurrentNode.Token.Type == self.Tokens.NUM_TYPE) then
         --return CurrentNode.NextNode.Token.Value
@@ -121,6 +122,18 @@ function CInterpreter:MainEvaluator(CurrentNode)
     elseif (CurrentNode.Token.Type == self.Tokens.PRINT) then
         print(self:TypeEvaluator(CurrentNode.NextNode))
         return 0
+    elseif (CurrentNode.Token.Type == self.Tokens.FOR) then
+        self:MainEvaluator(CurrentNode.LeftNode)
+        while (true) do
+            local Condition = self:MainEvaluator(CurrentNode.CentreLeftNode)
+            if (Condition == true) then
+                self:Interpret(CurrentNode.RightNode)
+            else
+                return 0
+            end
+            self:SetVariable( CurrentNode.CentreRightNode.NextNode.Token.Value, self:ArithmeticEvaluator(CurrentNode.CentreRightNode))
+        end
+        return 0
     elseif (CurrentNode.Token.Type == self.Tokens.GREATER) then
         return self:TypeEvaluator(CurrentNode.LeftNode) > self:TypeEvaluator(CurrentNode.RightNode)
     elseif (CurrentNode.Token.Type == self.Tokens.LESSER) then
@@ -138,6 +151,16 @@ end
 
 function CInterpreter:Execute()
     local Root = self.Parser:Program()
+
+    --print(Root[1].CentreLeftNode.Token.Value)
+    --print(Root[1].CentreLeftNode.LeftNode.Token.Value)
+    --print(Root[1].CentreLeftNode.RightNode.Token.Value)
+    --
+    --print(Root[1].CentreRightNode.Token.Value)
+    --print(Root[1].CentreRightNode.NextNode.Token.Value)
+    --
+    --print(Root[1].RightNode[1].Token.Value)
+    --print(Root[1].RightNode[1].NextNode.Token.Value)
 
     for i = 1, #Root do
         self.SymbolTable:Evaluate(Root[i])
