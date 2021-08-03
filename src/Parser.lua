@@ -13,11 +13,10 @@ end
 
 function CParser:Program()
     self:SetNextToken()
-    if (self.CurrentToken.Type ~= self.Tokens.START) then
-        error("ERROR: PROGRAM MUST START WITH START KEYWORD")
-    else
-        return self:Statements()
+    if (self.CurrentToken ~= self.Tokens.START) then
+        error("ERROR: PROGRAM MUST START WITH START!")
     end
+    return self:Statements()
 end
 
 function CParser:Statements()
@@ -27,113 +26,95 @@ function CParser:Statements()
         if (self.CurrentToken.Type == self.Tokens.LBRACES) then
             self:SetNextToken()
         end
-        table.insert(Statements, (self:Statement()))
-        if (self.CurrentToken.Type == self.Tokens.SEMI) then
-            ;
-        elseif (self.CurrentToken.Type == self.Tokens.FINISH) then
-            break
-        elseif (self.CurrentToken.Type == self.Tokens.RBRACES) then
+        Statements:push(self:Statements())
+        -- This is where we get ;, }, {, FINISH, etc
+        self:SetNextToken()
+        if (self.CurrentToken.Type ~= self.Tokens.FINAL or self.CurrentToken.Type ~= self.Tokens.RBRACES) then
             break
         else
-            print(self.CurrentToken.Value)
-            error("ERROR: SEMI COLON MUST FOLLOW EACH STATEMENT")
+            self:SetNextToken(self.PastToken)
+            self:SemicolonTest()
         end
     end
-    return Statements
 end
 
 function CParser:Statement()
-    if (self.CurrentToken.Type == self.Tokens.VAR or self.CurrentToken.Type == self.Tokens.NUM_TYPE or self.CurrentToken.Type == self.Tokens.STR_TYPE or self.CurrentToken.Type == self.Tokens.BOOL_TYPE) then
-        return self:Assign()
-    elseif (self.CurrentToken.Type == self.Tokens.IF) then
-        return self:IfElse()
-    elseif (self.CurrentToken.Type == self.Tokens.PRINT) then
-        return self:Print()
-    elseif (self.CurrentToken.Type == self.Tokens.WHILE) then
-        return self:While()
-    elseif (self.CurrentToken.Type == self.Tokens.FOR) then
-        return self:For()
+    return ({
+        [self.Tokens.NUM_TYPE or self.Tokens.STR_TYPE or self.Tokens.BOOL_TYPE or self.Tokens.VAR] = function()
+            return self:Assign()
+        end,
+        [self.Tokens.IF] = function()
+            return self:IfElse()
+        end,
+        [self.Tokens.WHILE] = function()
+            return self:While()
+        end,
+        [self.Tokens.FOR] = function()
+            return self:For()
+        end,
+        [self.Tokens.PRINT] = function()
+            return self:Print()
+        end,
+        [nil] = function()
+            return nil
+        end
+    })[self.CurrentToken]
+end
+
+function CParser:Assign()
+    if (self.CurrentToken.Value == self.Tokens.VAR) then
+        self:SetNextToken()
+        return CAST.CBinaryNode:new(self.CurrentToken, self.PastToken, self:Expr())
     else
-        return nil
+        local Type = self.CurrentToken
+        self:SetNextToken()
+        self:SetNextToken()
+        return CAST.CBinaryNode:new(CAST.CUnaryNode:new(Type, self.PastToken), self.CurrentToken, self:Expr())
     end
-end
-
-function CParser:Print()
-    local Print = self.CurrentToken
-    local Test = self:Value()
-    self:SetNextToken()
-    return CAST.CUnaryNode:new(Print, Test)
-end
-
-function CParser:While()
-    local While = self.CurrentToken
-    local Condition = self:Condition()
-    return CAST.CBinaryNode:new(While, Condition, self:Statements())
-end
-
-function CParser:For()
-    local For = self.CurrentToken
-    self:SetNextToken()
-    local Variable = self:Assign()
-    local Condition = self:Condition()
-    self:SetNextToken()
-    self:SetNextToken()
-    local Increment = self:Expr()
-    return CAST.CQuaternaryNode:new(For, Variable, Condition, Increment, self:Statements())
 end
 
 function CParser:IfElse()
     local If = self.CurrentToken
     local Condition = self:Condition()
-    local Branch = self:Statements()
+    local FirstBranch = self:Statements()
     self:SetNextToken()
-    if (self.CurrentToken.Type == self.Tokens.ELSE) then
-        self:SetNextToken()
-        return CAST.CTernaryNode:new(If, Branch, Condition, self:Statements())
+    if (self.CurrentToken.Token == self.Tokens.ELSE) then
+        return CAST.CTernaryNode(If, Condition, FirstBranch, self:Statements())
     else
-        return CAST.CTernaryNode:new(If, Branch, Condition, nil)
+        return CAST.CTernaryNode(If, Condition, FirstBranch, nil)
     end
 end
 
 function CParser:Condition()
-    local Condition = self:Value()
+    local Expr1 = self:Expr()
     self:SetNextToken()
-    return CAST.CBinaryNode:new(self.CurrentToken, Condition, self:Value())
+    return CAST.CBinaryNode:new(Expr1, self.CurrentToken, self:Expr())
 end
 
-function CParser:Assign()
-    local Node = self:Variable()
-    self:SetNextToken()
-    Node = CAST.CBinaryNode:new(self.CurrentToken, Node, self:Value())
-    self:SetNextToken()
-    return Node
+function CParser:While()
+    return CAST.CTernaryNode(self.CurrentToken, self:Condition(), self:Statements())
 end
 
-function CParser:Value()
+function CParser:For()
+    local For = self.CurrentToken
+    local Assign = self:Assign()
+    self:SemicolonTest()
+    local Condition = self:Condition()
     self:SetNextToken()
-    if (self.CurrentToken.Type == self.Tokens.STR) then
-        return CAST.CNode:new(self.CurrentToken)
-    elseif (self.CurrentToken.Type == self.Tokens.BOOL) then
-        return CAST.CNode:new(self.CurrentToken)
-    else
-        return self:Expr()
-    end
-
-    --elseif (self.CurrentToken.Type == self.Tokens.VAR) then
-    --return CAST.CNode:new(self.CurrentToken)
+    self:SemicolonTest()
+    local Expr = self:Expr()
+    self:SetNextToken()
+    return CAST.CQuaternaryNode(For, Assign, Condition, Expr, self:Statements())
 end
 
 function CParser:Expr()
     local Node = self:Term()
-
     while true do
         self:SetNextToken()
-        local Operation = self.CurrentToken
-        if (self.CurrentToken.Type == self.Tokens.ADD or self.CurrentToken.Type == self.Tokens.MIN) then
-            self:SetNextToken()
-            Node = CAST.CBinaryNode:new(Operation, Node, self:Term())
+        if (self.CurrentToken.Value == self.Tokens.MUL or self.CurrentToken.Value == self.Tokens.DIV) then
+            Node =  CAST.CBinaryNode:new(self.CurrentToken, Node, self:Term())
         else
-            self.Lexer.CurrentPosition = self.Lexer.CurrentPosition - 1
+            self:SetNextToken(self.PastToken)
             break
         end
     end
@@ -141,49 +122,53 @@ function CParser:Expr()
 end
 
 function CParser:Term()
-    local Node = self:Factor()
+    local Node = self:Value()
     while true do
         self:SetNextToken()
-        local Operation = self.CurrentToken
-        if (self.CurrentToken.Type == self.Tokens.MUL or self.CurrentToken.Type == self.Tokens.DIV) then
-            self:SetNextToken()
-            Node = CAST.CBinaryNode:new(Operation, Node, self:Factor())
+        if (self.CurrentToken.Value == self.Tokens.ADD or self.CurrentToken.Value == self.Tokens.MIN) then
+            Node =  CAST.CBinaryNode:new(self.CurrentToken, Node, self:Value())
         else
-            self.Lexer.CurrentPosition = self.Lexer.CurrentPosition - 1
+            self:SetNextToken(self.PastToken)
             break
         end
     end
     return Node
 end
 
-function CParser:Factor()
-    if (self.CurrentToken.Type == self.Tokens.NUM) then
-        return CAST.CNode:new(self.CurrentToken)
-    elseif (self.CurrentToken.Type == self.Tokens.LPAREN) then
-        return self:Expr()
-    elseif (self.CurrentToken.Type == self.Tokens.ADD or self.CurrentToken.Type == self.Tokens.MIN) then
-        self:SetNextToken()
-        local Operator = CAST.CUnaryNode:new(self.CurrentToken, self:Factor())
-        return Operator
-    else
-    --    Must be a variable
-        return self:Variable()
-    end
+function CParser:Value()
+    self:SetNextToken()
+    Cases =
+    {
+        [self.Tokens.NUM or self.Tokens.STR or self.Tokens.BOOL or self.Tokens.VAR] = function ()
+            return CAST.CNode(self.CurrentToken)
+        end,
+        [self.Tokens.ADD or self.Tokens.MIN] = function()
+            return CAST.CUnaryNode(self,CurrentToken, self:Value())
+        end,
+        [self.Tokens.LPAREN] = function()
+            return self:expr()
+        end
+    }
 end
 
-function CParser:Variable()
-    if (self.CurrentToken.Type == self.Tokens.NUM_TYPE or self.CurrentToken.Type == self.Tokens.STR_TYPE or self.CurrentToken.Type == self.Tokens.BOOL_TYPE) then
-        local OldToken = self.CurrentToken
-        self:SetNextToken()
-        return CAST.CUnaryNode:new(OldToken, self:Variable())
-    else
-        return CAST.CNode:new(self.CurrentToken)
-    end
+function CParser:Print()
+    return CAST.CUnaryNode:new(self.CurrentToken, self:Expr())
 end
 
-function CParser:SetNextToken()
+function CParser:SetNextToken(Token)
     self.PastToken = self.CurrentToken
-    self.CurrentToken = self.Lexer:GetNextToken()
+    if (Token ~= nil) then
+        self.CurrentToken = Token
+    else
+        self.CurrentToken = self.Lexer:GetNextToken()
+    end
+end
+
+function CParser:SemicolonTest()
+    self:SetNextToken()
+    if (self.CurrentToken.Type ~= self.Tokens.SEMI) then
+        error("ERROR: SEMICOLON EXCEPTED")
+    end
 end
 
 return { CParser }

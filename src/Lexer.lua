@@ -181,7 +181,7 @@ function CLexer:GetNextToken()
             local NextParenthesis = self.Input:find(")", self.CurrentPosition) or #self.Input
             local NextSpace = self.Input:find(" ", self.CurrentPosition) or #self.Input
             local NextSemi = self.Input:find(";", self.CurrentPosition) or #self.Input
-            local FinalCharacter
+                local FinalCharacter
             local Result
 
             if (NextSpace < NextSemi and NextSpace < NextParenthesis) then
