@@ -1,6 +1,6 @@
 local CAST = require("src.AST")
 
-CParser = { Lexer, CurrentToken, Tokens }
+CParser = { Lexer, CurrentToken, Tokens, PastToken }
 
 function CParser:new(Lexer)
     NewParser = {}
@@ -79,7 +79,6 @@ function CParser:For()
     self:SetNextToken()
     self:SetNextToken()
     local Increment = self:Expr()
-    --self:SetNextToken()
     return CAST.CQuaternaryNode:new(For, Variable, Condition, Increment, self:Statements())
 end
 
@@ -183,6 +182,7 @@ function CParser:Variable()
 end
 
 function CParser:SetNextToken()
+    self.PastToken = self.CurrentToken
     self.CurrentToken = self.Lexer:GetNextToken()
 end
 
