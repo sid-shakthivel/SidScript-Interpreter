@@ -1,6 +1,6 @@
 local CAST = require("src.AST")
 
-CParser = { Lexer, CurrentToken, Tokens, PastToken }
+CParser = { Lexer, CurrentToken, Tokens, LastToken }
 
 function CParser:new(Lexer)
     NewParser = {}
@@ -13,10 +13,11 @@ end
 
 function CParser:Program()
     self:SetNextToken()
-    if (self.CurrentToken ~= self.Tokens.START) then
+    if (self.CurrentToken.Type ~= self.Tokens.START) then
         error("ERROR: PROGRAM MUST START WITH START!")
     end
-    return self:Statements()
+    local Statements = self:Statements()
+    return Statements
 end
 
 function CParser:Statements()
@@ -26,21 +27,37 @@ function CParser:Statements()
         if (self.CurrentToken.Type == self.Tokens.LBRACES) then
             self:SetNextToken()
         end
-        Statements:push(self:Statements())
+        local Statement = self:Statement()
+        table.insert(Statements, Statement)
         -- This is where we get ;, }, {, FINISH, etc
-        self:SetNextToken()
-        if (self.CurrentToken.Type ~= self.Tokens.FINAL or self.CurrentToken.Type ~= self.Tokens.RBRACES) then
+        if (self.CurrentToken.Type == self.Tokens.FINISH or self.CurrentToken.Type == self.Tokens.RBRACES) then
             break
         else
-            self:SetNextToken(self.PastToken)
-            self:SemicolonTest()
+            self:SetNextToken(self.LastToken)
+        end
+        self:SemicolonTest()
+        self:SetNextToken()
+        if (self.CurrentToken.Type == self.Tokens.FINISH or self.CurrentToken.Type == self.Tokens.RBRACES) then
+            break
+        else
+            self:SetNextToken(self.LastToken)
         end
     end
+    return Statements
 end
 
 function CParser:Statement()
     return ({
-        [self.Tokens.NUM_TYPE or self.Tokens.STR_TYPE or self.Tokens.BOOL_TYPE or self.Tokens.VAR] = function()
+        [self.Tokens.NUM_TYPE] = function()
+            return self:Assign()
+        end,
+        [self.Tokens.STR_TYPE ] = function()
+            return self:Assign()
+        end,
+        [self.Tokens.BOOL_TYPE] = function()
+            return self:Assign()
+        end,
+        [self.Tokens.VAR] = function()
             return self:Assign()
         end,
         [self.Tokens.IF] = function()
@@ -55,21 +72,21 @@ function CParser:Statement()
         [self.Tokens.PRINT] = function()
             return self:Print()
         end,
-        [nil] = function()
-            return nil
+        [self.Tokens.ADD] = function()
+            return self:Expr()
         end
-    })[self.CurrentToken]
+    })[self.CurrentToken.Type]()
 end
 
 function CParser:Assign()
-    if (self.CurrentToken.Value == self.Tokens.VAR) then
+    if (self.CurrentToken.Type == self.Tokens.VAR) then
         self:SetNextToken()
-        return CAST.CBinaryNode:new(self.CurrentToken, self.PastToken, self:Expr())
+        return CAST.CBinaryNode:new(self.CurrentToken, CAST.CNode:new(self.LastToken), self:Expr())
     else
         local Type = self.CurrentToken
         self:SetNextToken()
         self:SetNextToken()
-        return CAST.CBinaryNode:new(CAST.CUnaryNode:new(Type, self.PastToken), self.CurrentToken, self:Expr())
+        return CAST.CBinaryNode:new(self.CurrentToken, CAST.CUnaryNode:new(Type, CAST.CNode:new(self.LastToken)), self:Expr())
     end
 end
 
@@ -88,11 +105,14 @@ end
 function CParser:Condition()
     local Expr1 = self:Expr()
     self:SetNextToken()
-    return CAST.CBinaryNode:new(Expr1, self.CurrentToken, self:Expr())
+    return CAST.CBinaryNode:new(self.CurrentToken, Expr1, self:Expr())
 end
 
 function CParser:While()
-    return CAST.CTernaryNode(self.CurrentToken, self:Condition(), self:Statements())
+    local While = self.CurrentToken
+    local Condition = self:Condition()
+    local Statements = self:Statements()
+    return CAST.CBinaryNode:new(While, Condition, Statements)
 end
 
 function CParser:For()
@@ -111,10 +131,10 @@ function CParser:Expr()
     local Node = self:Term()
     while true do
         self:SetNextToken()
-        if (self.CurrentToken.Value == self.Tokens.MUL or self.CurrentToken.Value == self.Tokens.DIV) then
+        if (self.CurrentToken.Type == self.Tokens.ADD or self.CurrentToken.Type == self.Tokens.ADD) then
             Node =  CAST.CBinaryNode:new(self.CurrentToken, Node, self:Term())
         else
-            self:SetNextToken(self.PastToken)
+            self:SetNextToken(self.LastToken)
             break
         end
     end
@@ -125,10 +145,10 @@ function CParser:Term()
     local Node = self:Value()
     while true do
         self:SetNextToken()
-        if (self.CurrentToken.Value == self.Tokens.ADD or self.CurrentToken.Value == self.Tokens.MIN) then
+        if (self.CurrentToken.Type == self.Tokens.MUL or self.CurrentToken.Type == self.Tokens.DIV) then
             Node =  CAST.CBinaryNode:new(self.CurrentToken, Node, self:Value())
         else
-            self:SetNextToken(self.PastToken)
+            self:SetNextToken(self.LastToken)
             break
         end
     end
@@ -137,18 +157,26 @@ end
 
 function CParser:Value()
     self:SetNextToken()
-    Cases =
-    {
-        [self.Tokens.NUM or self.Tokens.STR or self.Tokens.BOOL or self.Tokens.VAR] = function ()
-            return CAST.CNode(self.CurrentToken)
+    return ({
+        [self.Tokens.STR] = function ()
+            return CAST.CNode:new(self.CurrentToken)
+        end,
+        [self.Tokens.NUM] = function()
+            return CAST.CNode:new(self.CurrentToken)
+        end,
+        [self.Tokens.BOOL] = function()
+            return CAST.CNode:new(self.CurrentToken)
+        end,
+        [self.Tokens.VAR] = function()
+            return CAST.CNode:new(self.CurrentToken)
         end,
         [self.Tokens.ADD or self.Tokens.MIN] = function()
-            return CAST.CUnaryNode(self,CurrentToken, self:Value())
+            return CAST.CUnaryNode:new(self,CurrentToken, self:Value())
         end,
         [self.Tokens.LPAREN] = function()
             return self:expr()
         end
-    }
+    })[self.CurrentToken.Type]()
 end
 
 function CParser:Print()
@@ -156,9 +184,10 @@ function CParser:Print()
 end
 
 function CParser:SetNextToken(Token)
-    self.PastToken = self.CurrentToken
+    self.LastToken = self.CurrentToken
     if (Token ~= nil) then
         self.CurrentToken = Token
+        self.Lexer:SetLastToken()
     else
         self.CurrentToken = self.Lexer:GetNextToken()
     end
@@ -170,5 +199,17 @@ function CParser:SemicolonTest()
         error("ERROR: SEMICOLON EXCEPTED")
     end
 end
+
+--function CParser:SpecialSymbolTest()
+--    if (self.CurrentToken.Type == self.Tokens.FINISH or self.CurrentToken.Type == self.Tokens.RBRACES) then
+--        break
+--    end
+--    self:SetNextToken()
+--    if (self.CurrentToken.Type == self.Tokens.FINISH) then
+--        break
+--    else
+--        self:SetNextToken(self.LastToken)
+--    end
+--end
 
 return { CParser }

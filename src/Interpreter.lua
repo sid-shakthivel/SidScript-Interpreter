@@ -152,15 +152,23 @@ end
 function CInterpreter:Execute()
     local Root = self.Parser:Program()
 
-    --print(Root[1].CentreLeftNode.Token.Value)
-    --print(Root[1].CentreLeftNode.LeftNode.Token.Value)
-    --print(Root[1].CentreLeftNode.RightNode.Token.Value)
+    --print("WHILE")
+    --print(Root[2].Token.Value)
+    --print(Root[2].LeftNode.Token.Value)
+    --print(Root[2].LeftNode.RightNode.Token.Value)
+    --print(Root[2].LeftNode.LeftNode.Token.Value)
     --
-    --print(Root[1].CentreRightNode.Token.Value)
-    --print(Root[1].CentreRightNode.NextNode.Token.Value)
+    --print("STATEMENT 1")
+    --print(Root[2].RightNode[1].Token.Value)
+    --print(Root[2].RightNode[1].NextNode.Token.Value)
     --
-    --print(Root[1].RightNode[1].Token.Value)
-    --print(Root[1].RightNode[1].NextNode.Token.Value)
+    --print("STATEMENT 2")
+    --print(Root[2].RightNode[2].Token.Value)
+    --print(Root[2].RightNode[2].LeftNode.Token.Value)
+    --
+    --print(Root[2].RightNode[2].RightNode.Token.Value)
+    --print(Root[2].RightNode[2].RightNode.LeftNode.Token.Value)
+    --print(Root[2].RightNode[2].RightNode.RightNode.Token.Value)
 
     for i = 1, #Root do
         self.SymbolTable:Evaluate(Root[i])

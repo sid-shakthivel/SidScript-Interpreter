@@ -9,7 +9,7 @@ function CToken:new(value, type)
     return NewToken
 end
 
-CLexer = { CurrentPosition, Input }
+CLexer = { CurrentPosition, Input, LastPosition }
 
 CLexer.Tokens = {
     ADD = "ADD",
@@ -73,6 +73,7 @@ function CLexer:Peek()
 end
 
 function CLexer:GetNextToken()
+    self.LastPosition = self.CurrentPosition
     local Character = self.Input:sub(self.CurrentPosition, self.CurrentPosition)
     local Token
 
@@ -181,7 +182,7 @@ function CLexer:GetNextToken()
             local NextParenthesis = self.Input:find(")", self.CurrentPosition) or #self.Input
             local NextSpace = self.Input:find(" ", self.CurrentPosition) or #self.Input
             local NextSemi = self.Input:find(";", self.CurrentPosition) or #self.Input
-                local FinalCharacter
+            local FinalCharacter
             local Result
 
             if (NextSpace < NextSemi and NextSpace < NextParenthesis) then
@@ -192,10 +193,13 @@ function CLexer:GetNextToken()
                 NextSemi = NextSemi - 1
                 Result = self.Input:sub(OldPosition, NextSemi)
                 FinalCharacter = NextSemi
-            else
+            elseif (NextParenthesis < NextSpace and NextParenthesis < NextSemi) then
                 NextParenthesis = NextParenthesis - 1
                 Result = self.Input:sub(OldPosition, NextParenthesis)
                 FinalCharacter = NextParenthesis
+            else
+                Result = self.Input:sub(OldPosition, NextSpace)
+                FinalCharacter = NextSpace
             end
 
             if (MultiCharacterCases[Result]) then
@@ -217,6 +221,10 @@ function CLexer:GetNextToken()
 
     self.CurrentPosition = self.CurrentPosition + 1
     return Token
+end
+
+function CLexer:SetLastToken()
+    self.CurrentPosition = self.LastPosition
 end
 
 return { CLexer }
