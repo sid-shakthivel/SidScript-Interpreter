@@ -24,19 +24,21 @@ function CParser:Statements()
     local Statements = {}
     while true do
         self:SetNextToken()
+        if (self.CurrentToken.Type == self.Tokens.FINISH) then
+            break
+        end
         if (self.CurrentToken.Type == self.Tokens.RBRACES) then
-            self:SetNextToken(self.CurrentToken)
             break
         end
         if (self.CurrentToken.Type == self.Tokens.LBRACES) then
             self:SetNextToken()
         end
-        if (self.CurrentToken.Type == self.Tokens.FINISH) then
-            break
-        end
         table.insert(Statements, self:Statement())
         if (self.CurrentToken.Type == self.Tokens.RBRACES) then
             ;
+        elseif (self.CurrentToken.Type == self.Tokens.FINISH) then
+            print(self.LastToken.Value)
+            break
         else
             self:SemicolonTest()
         end
@@ -44,11 +46,7 @@ function CParser:Statements()
     return Statements
 end
 
-test = 1
-
 function CParser:Statement()
-    --print(test)
-    test = test + 1
     return ({
         [self.Tokens.NUM_TYPE] = function()
             return self:Assign()
@@ -100,7 +98,7 @@ function CParser:IfElse()
     if (self.CurrentToken.Token == self.Tokens.ELSE) then
         return CAST.CTernaryNode:new(If, FirstBranch, Condition , self:Statements())
     else
-        --self:SetNextToken(self.LastToken)
+        self:SetNextToken(self.LastToken)
         return CAST.CTernaryNode:new(If, FirstBranch , Condition, nil)
     end
 end
@@ -199,7 +197,6 @@ end
 function CParser:SemicolonTest()
     self:SetNextToken()
     if (self.CurrentToken.Type ~= self.Tokens.SEMI) then
-        print(self.CurrentToken.Value)
         error("ERROR: SEMICOLON EXCEPTED")
     end
 end

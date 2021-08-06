@@ -26,7 +26,10 @@ end
 
 function CInterpreter:VariableEvaluator(CurrentNode)
     if (CurrentNode.Token.Type == self.Tokens.ASSIGN) then
-        local Variable = self:VariableEvaluator(CurrentNode.LeftNode)
+        local Variable = CurrentNode.LeftNode.Token.Value
+        if (CurrentNode.LeftNode.NextNode) then
+            Variable = self:VariableEvaluator(CurrentNode.LeftNode)
+        end
         local Value = self:VariableEvaluator(CurrentNode.RightNode)
         self:SetVariable(Variable, Value)
         return self:GetVariable(Variable)
@@ -38,7 +41,7 @@ function CInterpreter:VariableEvaluator(CurrentNode)
         if (self:GetVariable(CurrentNode.Token.Value) == nil) then
             return CurrentNode.Token.Value
         else
-            return self:GetVariable(CurrentNode.Token.Value).Value
+            return self:GetVariable(CurrentNode.Token.Value)
         end
     elseif (CurrentNode.Token.Type == self.Tokens.MUL) then
         return self:VariableEvaluator(CurrentNode.RightNode) * self:VariableEvaluator(CurrentNode.LeftNode)
@@ -48,28 +51,28 @@ function CInterpreter:VariableEvaluator(CurrentNode)
         return self:VariableEvaluator(CurrentNode.RightNode) / self:VariableEvaluator(CurrentNode.LeftNode)
     elseif (CurrentNode.Token.Type == self.Tokens.ADD) then
         if (CurrentNode.NextNode) then
-            return self:VariableEvaluator(CurrentNode.RightNode) + 1
+            return self:VariableEvaluator(CurrentNode.NextNode) + 1
         else
             return self:VariableEvaluator(CurrentNode.RightNode) + self:VariableEvaluator(CurrentNode.LeftNode)
         end
     end
+    return 0
 end
 
 function CInterpreter:ConditionalEvaluator(CurrentNode)
     if (CurrentNode.Token.Type == self.Tokens.IF) then
         local Condition = self:ConditionalEvaluator(CurrentNode.CentreNode)
         if (Condition == true) then
-            return self:MainInterpreter(CurrentNode.LeftNode)
+            return self:Interpret(CurrentNode.LeftNode)
         elseif (Condition == false and CurrentNode.RightNode) then
-            return self:MainInterpreter(CurrentNode.RightNode)
-        else
-            return 0
+            return self:Interpret(CurrentNode.RightNode)
         end
+        return 0
     elseif (CurrentNode.Token.Type == self.Tokens.EQUALS) then
         return self:VariableEvaluator(CurrentNode.LeftNode) == self:VariableEvaluator(CurrentNode.RightNode)
     elseif (CurrentNode.Token.Type == self.Tokens.GREATER) then
         return self:VariableEvaluator(CurrentNode.LeftNode) > self:VariableEvaluator(CurrentNode.RightNode)
-    elseif (CurrentNode.Token.Type == self.Tokens.LOWER) then
+    elseif (CurrentNode.Token.Type == self.Tokens.LESSER) then
         return self:VariableEvaluator(CurrentNode.LeftNode) < self:VariableEvaluator(CurrentNode.RightNode)
     end
 end
@@ -77,41 +80,39 @@ end
 function CInterpreter:IterativeEvaluator(CurrentNode)
     if (CurrentNode.Token.Type == self.Tokens.WHILE) then
         while true do
-            local Condition = self:ConditionalEvaluator(CurrentNode.LeftNode)
-            if (Condition == true) then
-                self:MainInterpreter(Condition.RightNode)
+            if (self:ConditionalEvaluator(CurrentNode.LeftNode) == true) then
+                self:Interpret(CurrentNode.RightNode)
             else
                 break
             end
         end
-        return 0
     elseif (CurrentNode.Token.Type == self.Tokens.FOR) then
         local Variable = self:VariableEvaluator(CurrentNode.LeftNode)
         while true do
-            local Condition = self:ConditionalEvaluator(CurrentNode.CentreLeftNode)
-            if (Condition == true) then
-                self:MainInterpreter(CurrentNode.RightNode)
+            if (self:ConditionalEvaluator(CurrentNode.CentreLeftNode) == true) then
+                self:Interpret(CurrentNode.RightNode)
             else
                 break
             end
             self:SetVariable(Variable.Name, self:VariableEvaluator(CurrentNode.CentreRightNode))
         end
-        return 0
     end
+    return 0
 end
 
-function CInterpreter:MainInterpreter(CurrentNode)
+function CInterpreter:MainEvaluator(CurrentNode)
     if (CurrentNode.Token.Type == self.Tokens.ASSIGN) then
-        return self:VariableEvaluator()
-    elseif (CurrentNode.Token.Type == self.tokens.IF) then
-        return self:ConditionalEvaluator()
+        return self:VariableEvaluator(CurrentNode)
+    elseif (CurrentNode.Token.Type == self.Tokens.IF) then
+        return self:ConditionalEvaluator(CurrentNode)
     elseif (CurrentNode.Token.Type == self.Tokens.WHILE) then
-        return self:IterativeEvaluator()
+        return self:IterativeEvaluator(CurrentNode)
     elseif (CurrentNode.Token.Type == self.Tokens.FOR) then
-        return self:IterativeEvaluator()
+        return self:IterativeEvaluator(CurrentNode)
     elseif (CurrentNode.Token.Type == self.Tokens.PRINT) then
-
+        print(self:VariableEvaluator(CurrentNode.NextNode))
     end
+    return 0
 end
 
 function CInterpreter:Interpret(Root)
@@ -123,11 +124,11 @@ end
 function CInterpreter:Execute()
     local Root = self.Parser:Program()
 
-    --for i = 1, #Root do
-    --    self.SymbolTable:Evaluate(Root[i])
-    --end
-    --
-    --self:Interpret(Root)
+    for i = 1, #Root do
+        self.SymbolTable:Evaluate(Root[i])
+    end
+
+    self:Interpret(Root)
 end
 
 return { CInterpreter }
