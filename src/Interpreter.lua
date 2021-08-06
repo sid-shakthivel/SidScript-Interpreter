@@ -4,6 +4,7 @@ local CSymbolTable = require("src.SymbolTable")[1]
 
 CInterpreter = { Lexer, Parser, SymbolTable, Tokens }
 CInterpreter.VariableTable = {}
+CInterpreter.FunctionTable = {}
 
 function CInterpreter:new(LexerInput)
     NewInterpreter = {}
@@ -21,6 +22,15 @@ function CInterpreter:SetVariable(Name, Value)
 end
 
 function CInterpreter:GetVariable(Name)
+    return self.VariableTable[Name]
+end
+
+function CInterpreter:SetFunction(Name, Value)
+    -- Value = AST
+    self.VariableTable[Name] = Value
+end
+
+function CInterpreter:GetFunction(Name)
     return self.VariableTable[Name]
 end
 
@@ -100,17 +110,27 @@ function CInterpreter:IterativeEvaluator(CurrentNode)
     return 0
 end
 
+function CInterpreter:FunctionEvaluator(CurrentNode)
+    if (CurrentNode.Token.Type == self.Tokens.FUNC) then
+        self:SetFunction(CurrentNode.CentreNode.Token.Value, CurrentNode)
+    elseif (CurrentNode.Token.Type == self.Tokens.CALL) then
+        local Function = self:GetFunction(CurrentNode.LeftNode.Token.Value)
+        -- Deal with parameters later...
+        return self:Interpret(Function.RightNode)
+    end
+end
+
 function CInterpreter:MainEvaluator(CurrentNode)
     if (CurrentNode.Token.Type == self.Tokens.ASSIGN) then
         return self:VariableEvaluator(CurrentNode)
     elseif (CurrentNode.Token.Type == self.Tokens.IF) then
         return self:ConditionalEvaluator(CurrentNode)
-    elseif (CurrentNode.Token.Type == self.Tokens.WHILE) then
-        return self:IterativeEvaluator(CurrentNode)
-    elseif (CurrentNode.Token.Type == self.Tokens.FOR) then
+    elseif (CurrentNode.Token.Type == self.Tokens.WHILE or CurrentNode.Token.Type == self.Tokens.FOR) then
         return self:IterativeEvaluator(CurrentNode)
     elseif (CurrentNode.Token.Type == self.Tokens.PRINT) then
         print(self:VariableEvaluator(CurrentNode.NextNode))
+    elseif (CurrentNode.Token.Type == self.Tokens.FUNC or CurrentNode.Token.Type == self.Tokens.CALL) then
+        return self:FunctionEvaluator(CurrentNode)
     end
     return 0
 end
@@ -123,6 +143,16 @@ end
 
 function CInterpreter:Execute()
     local Root = self.Parser:Program()
+
+    --print(Root[1].Token.Value)
+    --print(Root[1].CentreNode.Token.Value)
+    --print(#Root[1].LeftNode)
+    --print(Root[1].RightNode[1].Token.Value)
+    --print(Root[1].RightNode[1].NextNode.Token.Value)
+
+    --print(Root[2].Token.Value)
+    --print(Root[2].LeftNode.Token.Value)
+    --print(#Root[2].RightNode)
 
     for i = 1, #Root do
         self.SymbolTable:Evaluate(Root[i])

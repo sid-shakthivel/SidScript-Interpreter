@@ -37,11 +37,14 @@ CLexer.Tokens = {
     LESSER = "LESSER",
     EQUALS = "EQUALS",
     COLON = "COLON",
-    RBRACES = "RBRACES",
-    LBRACES = "LBRACES",
+    RBRACE = "RBRACE",
+    LBRACE = "LBRACE",
     PRINT = "PRINT",
     WHILE = "WHILE",
     FOR = "FOR",
+    COMMA = "COMMA",
+    FUNC = "FUNC",
+    CALL = "CALL",
 }
 
 function CLexer:new(input)
@@ -125,10 +128,10 @@ function CLexer:GetNextToken()
             return CToken:new(':', self.Tokens.COLON)
         end,
         ['{'] = function()
-            return CToken:new('{', self.Tokens.LBRACES)
+            return CToken:new('{', self.Tokens.LBRACE)
         end,
         ['}'] = function()
-            return CToken:new('}', self.Tokens.RBRACES)
+            return CToken:new('}', self.Tokens.RBRACE)
         end
     }
 
@@ -168,6 +171,9 @@ function CLexer:GetNextToken()
         end,
         ["for"] = function()
             return CToken:new("for", self.Tokens.FOR)
+        end,
+        ["func"] = function()
+            return CToken:new("func", self.Tokens.FUNC)
         end
     }
 

@@ -27,17 +27,16 @@ function CParser:Statements()
         if (self.CurrentToken.Type == self.Tokens.FINISH) then
             break
         end
-        if (self.CurrentToken.Type == self.Tokens.RBRACES) then
+        if (self.CurrentToken.Type == self.Tokens.RBRACE) then
             break
         end
-        if (self.CurrentToken.Type == self.Tokens.LBRACES) then
+        if (self.CurrentToken.Type == self.Tokens.LBRACE) then
             self:SetNextToken()
         end
         table.insert(Statements, self:Statement())
-        if (self.CurrentToken.Type == self.Tokens.RBRACES) then
+        if (self.CurrentToken.Type == self.Tokens.RBRACE) then
             ;
         elseif (self.CurrentToken.Type == self.Tokens.FINISH) then
-            print(self.LastToken.Value)
             break
         else
             self:SemicolonTest()
@@ -58,7 +57,14 @@ function CParser:Statement()
             return self:Assign()
         end,
         [self.Tokens.VAR] = function()
-            return self:Assign()
+            self:SetNextToken()
+            if (self.CurrentToken.Type == self.Tokens.LPAREN) then
+                self:SetNextToken(self.LastToken)
+                return self:FunctionCall()
+            else
+                self:SetNextToken(self.LastToken)
+                return self:Assign()
+            end
         end,
         [self.Tokens.IF] = function()
             return self:IfElse()
@@ -74,8 +80,42 @@ function CParser:Statement()
         end,
         [self.Tokens.ADD] = function()
             return self:Expr()
+        end,
+        [self.Tokens.FUNC] = function()
+            return self:FunctionDeclaration()
         end
     })[self.CurrentToken.Type]()
+end
+
+function CParser:FunctionDeclaration()
+    local Func = self.CurrentToken
+    self:SetNextToken()
+    local FuncName = self.CurrentToken
+    local Parameters = self:FunctionParameters()
+    self:SetNextToken()
+    return CAST.CTernaryNode:new(Func, Parameters, CAST.CNode:new(FuncName), self:Statements())
+end
+
+function CParser:FunctionParameters()
+    local Parameters = {}
+    self:SetNextToken()
+    while true do
+        self:SetNextToken()
+        if (self.CurrentToken.Type == self.Tokens.RPAREN) then
+            break
+        elseif (self.CurrentToken.Type == self.Tokens.COMMA) then
+            self:SetNextToken()
+        else
+            table.insert(Parameters, self.CurrentToken)
+        end
+    end
+    return Parameters
+end
+
+function CParser:FunctionCall()
+    local FuncName = self.CurrentToken
+    local Parameters = self:FunctionParameters()
+    return CAST.CBinaryNode:new({ Value = "CALL", Type = self.Tokens.CALL }, CAST.CNode:new(FuncName), Parameters)
 end
 
 function CParser:Assign()
@@ -176,7 +216,7 @@ function CParser:Value()
         end,
         [self.Tokens.LPAREN] = function()
             return self:expr()
-        end
+        end,
     })[self.CurrentToken.Type]()
 end
 
