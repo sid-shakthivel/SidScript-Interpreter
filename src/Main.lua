@@ -16,10 +16,11 @@ FINISH\z
 
 Program = "\z
 START \z
-func foo () {\z
-    print `bar`;\z
+str test = `hello`;\z
+func foo (word) {\z
+    print word;\z
 }\z
-foo ();\z
+foo (test);\z
 FINISH\z
 "
 

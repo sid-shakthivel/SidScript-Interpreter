@@ -115,7 +115,10 @@ function CInterpreter:FunctionEvaluator(CurrentNode)
         self:SetFunction(CurrentNode.CentreNode.Token.Value, CurrentNode)
     elseif (CurrentNode.Token.Type == self.Tokens.CALL) then
         local Function = self:GetFunction(CurrentNode.LeftNode.Token.Value)
-        -- Deal with parameters later...
+        -- Parameters
+        for i = 1, #Function.LeftNode do
+            self:SetVariable(Function.LeftNode[i].Token.Value, self:VariableEvaluator(CurrentNode.RightNode[i]))
+        end
         return self:Interpret(Function.RightNode)
     end
 end

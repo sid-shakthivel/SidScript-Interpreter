@@ -106,7 +106,7 @@ function CParser:FunctionParameters()
         elseif (self.CurrentToken.Type == self.Tokens.COMMA) then
             self:SetNextToken()
         else
-            table.insert(Parameters, self.CurrentToken)
+            table.insert(Parameters, { Token = self.CurrentToken })
         end
     end
     return Parameters
