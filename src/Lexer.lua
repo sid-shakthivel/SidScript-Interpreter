@@ -77,6 +77,10 @@ function CLexer:Peek()
 end
 
 function CLexer:GetNextToken()
+    if (self.CurrentPosition >= #self.Input) then
+        return CToken:new(' ', self.Tokens.EOF)
+    end
+
     self.LastPosition = self.CurrentPosition
     local Character = self.Input:sub(self.CurrentPosition, self.CurrentPosition)
     local Token
@@ -86,10 +90,10 @@ function CLexer:GetNextToken()
         Character = self.Input:sub(self.CurrentPosition, self.CurrentPosition)
     end
 
-    if (self:Peek() == '=' and Character == '=') then
-        self.CurrentPosition = self.CurrentPosition + 2
-        return CToken:new('==', self.Tokens.EQUALS)
-    end
+    --if (self:Peek() == '=' and Character == '=') then
+    --    self.CurrentPosition = self.CurrentPosition + 2
+    --    return CToken:new('==', self.Tokens.EQUALS)
+    --end
 
     SingleCharacterCases = {
         ['+'] = function()
@@ -117,7 +121,13 @@ function CLexer:GetNextToken()
             return CToken:new(';', self.Tokens.SEMI)
         end,
         ['='] = function()
-            return CToken:new('=', self.Tokens.ASSIGN)
+            local Test = self:Peek()
+            if (Test == '=') then
+                self.CurrentPosition = self.CurrentPosition + 1
+                return CToken:new('==', self.Tokens.EQUALS)
+            else
+                return CToken:new('=', self.Tokens.ASSIGN)
+            end
         end,
         ['>'] = function()
             return CToken:new('>', self.Tokens.GREATER)

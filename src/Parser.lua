@@ -13,10 +13,6 @@ function CParser:new(Lexer)
 end
 
 function CParser:Program()
-    self:SetNextToken()
-    if (self.CurrentToken.Type ~= self.Tokens.START) then
-        error("PARSER ERROR: PROGRAM MUST START WITH START!")
-    end
     local Statements = self:Statements()
     return Statements
 end
@@ -25,7 +21,7 @@ function CParser:Statements()
     local Statements = {}
     while true do
         self:SetNextToken()
-        if (self.CurrentToken.Type == self.Tokens.FINISH or self.CurrentToken.Type == self.Tokens.RBRACE) then
+        if (self.CurrentToken.Type == self.Tokens.RBRACE or self.CurrentToken.Token == self.Tokens.EOF) then
             break
         end
         table.insert(Statements, self:Statement())
