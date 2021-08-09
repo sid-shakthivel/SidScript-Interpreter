@@ -47,10 +47,10 @@ CLexer.Tokens = {
     CALL = "CALL",
 }
 
-function CLexer:new(input)
+function CLexer:new(Input)
     NewLexer = {}
     setmetatable(NewLexer, self)
-    NewLexer.Input = input
+    NewLexer.Input = Input
     NewLexer.CurrentPosition = 1
     self.__index = self
     return NewLexer

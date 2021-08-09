@@ -1,28 +1,16 @@
 local CInterpreter = require("src.Interpreter")[1]
-local CLexer = require("src.Lexer")[1]
+--local CLexer = require("src.Lexer")[1]
 
-Program1 = "\z
-START \z
-num i = 0;\z
-while i < 10 {\z
-    if i == 4 {\z
-        print i;\z
-    }\z
-    i = i + 1;\z
-}\z
-print `hey`;\z
-FINISH\z
-"
+local File = io.open("./programs/program1.txt", "r")
+local Program = ""
+local CurrentLine = File:read("*line")
 
-Program = "\z
-START \z
-str test = `hello`;\z
-func foo (word) {\z
-    print word;\z
-}\z
-foo (test);\z
-FINISH\z
-"
+while CurrentLine ~= nil do
+    Program = Program .. " " .. CurrentLine
+    CurrentLine = File:read("*line")
+end
+
+File:close()
 
 Interpreter = CInterpreter:new(Program)
 Interpreter:Execute()
