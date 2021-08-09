@@ -1,8 +1,8 @@
 local CLexer = require("src.Lexer")[1]
 local CParser = require("src.Parser")[1]
-local CSymbolTable = require("src.SemanticAnalyser")[1]
+local CSemanticAnalyser = require("src.SemanticAnalyser")[1]
 
-CInterpreter = { Lexer, Parser, SymbolTable, Tokens }
+CInterpreter = { Lexer, Parser, SemanticAnalyser, Tokens }
 CInterpreter.VariableTable = {}
 
 function CInterpreter:new(LexerInput)
@@ -10,7 +10,7 @@ function CInterpreter:new(LexerInput)
     setmetatable(NewInterpreter, self)
     NewInterpreter.Lexer = CLexer:new(LexerInput)
     NewInterpreter.Parser = CParser:new(NewInterpreter.Lexer)
-    NewInterpreter.SymbolTable = CSymbolTable:new(NewInterpreter.Lexer.Tokens)
+    NewInterpreter.SemanticAnalyser = CSemanticAnalyser:new(NewInterpreter.Lexer.Tokens)
     NewInterpreter.Tokens = NewInterpreter.Lexer.Tokens
     self.__index = self
     return NewInterpreter
@@ -145,23 +145,8 @@ end
 function CInterpreter:Execute()
     local Root = self.Parser:Program()
 
-    --print(Root[1].Token.Value)
-    --
-    --print()
-    --print(Root[2].Token.Value)
-    --print(Root[2].CentreLeftNode.Token.Value)
-    --print(Root[2].CentreRightNode.Token.Value)
-    --print(Root[2].RightNode[1].Token.Value)
-    --print(Root[2].LeftNode[1].Token.Value)
-    --print(Root[2].LeftNode[1].NextNode.Token.Value)
-    --
-    --print()
-    --print(Root[3].Token.Value)
-    --print(Root[3].LeftNode.Token.Value)
-    --print(Root[3].RightNode[1].Token.Value)
-
     for i = 1, #Root do
-        --self.SymbolTable:Evaluate(Root[i])
+        --self.SemanticAnalyser:BuildSymbolTables(Root[i])
     end
 
     --self:Interpret(Root)

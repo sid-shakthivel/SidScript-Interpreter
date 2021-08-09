@@ -1,7 +1,6 @@
 START
 num i = 5;
-void func foo (num bar) {
-    print bar;
+if i == 5 {
+    print i;
 }
-foo (i);
 FINISH

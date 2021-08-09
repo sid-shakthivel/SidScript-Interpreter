@@ -1,4 +1,5 @@
 local CAST = require("src.AST")
+local Error = require("src.Error")
 
 CParser = { Lexer, CurrentToken, Tokens, LastToken }
 
@@ -14,7 +15,7 @@ end
 function CParser:Program()
     self:SetNextToken()
     if (self.CurrentToken.Type ~= self.Tokens.START) then
-        error("ERROR: PROGRAM MUST START WITH START!")
+        error("PARSER ERROR: PROGRAM MUST START WITH START!")
     end
     local Statements = self:Statements()
     return Statements
@@ -24,14 +25,8 @@ function CParser:Statements()
     local Statements = {}
     while true do
         self:SetNextToken()
-        if (self.CurrentToken.Type == self.Tokens.FINISH) then
+        if (self.CurrentToken.Type == self.Tokens.FINISH or self.CurrentToken.Type == self.Tokens.RBRACE) then
             break
-        end
-        if (self.CurrentToken.Type == self.Tokens.RBRACE) then
-            break
-        end
-        if (self.CurrentToken.Type == self.Tokens.LBRACE) then
-            self:SetNextToken()
         end
         table.insert(Statements, self:Statement())
         if (self.CurrentToken.Type == self.Tokens.RBRACE) then
@@ -46,73 +41,38 @@ function CParser:Statements()
 end
 
 function CParser:Statement()
-    return ({
-        [self.Tokens.NUM_TYPE] = function()
-            self:SetNextToken()
-            if (self.CurrentToken.Type == self.Tokens.FUNC) then
-                self:SetNextToken(self.LastToken)
-                return self:FunctionDeclaration()
-            else
-                self:SetNextToken(self.LastToken)
-                return self:Assign()
-            end
-        end,
-        [self.Tokens.STR_TYPE ] = function()
-            self:SetNextToken()
-            if (self.CurrentToken.Type == self.Tokens.FUNC) then
-                self:SetNextToken(self.LastToken)
-                return self:FunctionDeclaration()
-            else
-                self:SetNextToken(self.LastToken)
-                return self:Assign()
-            end
-        end,
-        [self.Tokens.BOOL_TYPE] = function()
-            self:SetNextToken()
-            if (self.CurrentToken.Type == self.Tokens.FUNC) then
-                self:SetNextToken(self.LastToken)
-                return self:FunctionDeclaration()
-            else
-                self:SetNextToken(self.LastToken)
-                return self:Assign()
-            end
-        end,
-        [self.Tokens.VOID_TYPE] = function()
-            self:SetNextToken()
-            if (self.CurrentToken.Type == self.Tokens.FUNC) then
-                self:SetNextToken(self.LastToken)
-                return self:FunctionDeclaration()
-            else
-                self:SetNextToken(self.LastToken)
-                return self:Assign()
-            end
-        end,
-        [self.Tokens.VAR] = function()
-            self:SetNextToken()
-            if (self.CurrentToken.Type == self.Tokens.LPAREN) then
-                self:SetNextToken(self.LastToken)
-                return self:FunctionCall()
-            else
-                self:SetNextToken(self.LastToken)
-                return self:Assign()
-            end
-        end,
-        [self.Tokens.IF] = function()
-            return self:IfElse()
-        end,
-        [self.Tokens.WHILE] = function()
-            return self:While()
-        end,
-        [self.Tokens.FOR] = function()
-            return self:For()
-        end,
-        [self.Tokens.PRINT] = function()
-            return self:Print()
-        end,
-        [self.Tokens.ADD] = function()
-            return self:Expr()
-        end,
-    })[self.CurrentToken.Type]()
+    local Type = self.CurrentToken.Type
+    if (Type == self.Tokens.NUM_TYPE or Type == self.Tokens.STR_TYPE or Type == self.Tokens.BOOL_TYPE or Type == self.Tokens.VOID_TYPE) then
+        self:SetNextToken()
+        if (self.CurrentToken.Type == self.Tokens.FUNC) then
+            self:SetNextToken(self.LastToken)
+            return self:FunctionDeclaration()
+        else
+            self:SetNextToken(self.LastToken)
+            return self:Assign()
+        end
+    elseif (Type == self.Tokens.VAR) then
+        self:SetNextToken()
+        if (self.CurrentToken.Type == self.Tokens.LPAREN) then
+            self:SetNextToken(self.LastToken)
+            return self:FunctionCall()
+        else
+            self:SetNextToken(self.LastToken)
+            return self:Assign()
+        end
+    elseif (Type == self.Tokens.IF) then
+        return self:IfElse()
+    elseif (Type == self.Tokens.WHILE) then
+        return self:While()
+    elseif (Type == self.Tokens.FOR) then
+        return self:For()
+    elseif (Type == self.Tokens.PRINT) then
+        return self:Print()
+    elseif (Type == self.Tokens.ADD) then
+        return self:Expr()
+    else
+        Error:Error(tostring("PARSER ERROR: INSTRUCTION " .. self.CurrentToken.Value .. " NOT DEFINED"))
+    end
 end
 
 function CParser:FunctionDeclaration()
@@ -122,7 +82,7 @@ function CParser:FunctionDeclaration()
     self:SetNextToken()
     local FuncName = self.CurrentToken
     local Parameters = self:FunctionParameters()
-    self:SetNextToken()
+    self:LeftBraceTest()
     return CAST.CQuaternaryNode:new(Func, Parameters, CAST.CNode:new(FuncName), CAST.CNode:new(FuncType),self:Statements())
 end
 
@@ -167,9 +127,11 @@ end
 function CParser:IfElse()
     local If = self.CurrentToken
     local Condition = self:Condition()
+    self:LeftBraceTest()
     local FirstBranch = self:Statements()
     self:SetNextToken()
-    if (self.CurrentToken.Token == self.Tokens.ELSE) then
+    if (self.CurrentToken.Type == self.Tokens.ELSE) then
+        self:LeftBraceTest()
         return CAST.CTernaryNode:new(If, FirstBranch, Condition , self:Statements())
     else
         self:SetNextToken(self.LastToken)
@@ -186,6 +148,7 @@ end
 function CParser:While()
     local While = self.CurrentToken
     local Condition = self:Condition()
+    self:LeftBraceTest()
     local Statements = self:Statements()
     return CAST.CBinaryNode:new(While, Condition, Statements)
 end
@@ -232,7 +195,8 @@ end
 
 function CParser:Value()
     self:SetNextToken()
-    return ({
+
+    local Cases = {
         [self.Tokens.STR] = function ()
             return CAST.CNode:new(self.CurrentToken)
         end,
@@ -251,7 +215,13 @@ function CParser:Value()
         [self.Tokens.LPAREN] = function()
             return self:expr()
         end,
-    })[self.CurrentToken.Type]()
+    }
+
+    if (Cases[self.CurrentToken.Type]) then
+        return Cases[self.CurrentToken.Type]()
+    else
+        Error:Error(tostring("PARSER ERROR: INVALID SYNTAX " .. self.CurrentToken.Value))
+    end
 end
 
 function CParser:Print()
@@ -271,7 +241,14 @@ end
 function CParser:SemicolonTest()
     self:SetNextToken()
     if (self.CurrentToken.Type ~= self.Tokens.SEMI) then
-        error("ERROR: SEMICOLON EXCEPTED")
+        Error:Error(tostring("PARSER ERROR: SEMICOLON EXCEPTED AFTER " .. self.CurrentToken.Value))
+    end
+end
+
+function CParser:LeftBraceTest()
+    self:SetNextToken()
+    if (self.CurrentToken.Type ~= self.Tokens.LBRACE) then
+        Error:Error(tostring("PARSER ERROR: EXPECTED LEFT BRACE BEFORE " .. self.CurrentToken.Value))
     end
 end
 

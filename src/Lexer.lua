@@ -189,7 +189,7 @@ function CLexer:GetNextToken()
         else
             local OldPosition = self.CurrentPosition
 
-            local NextParenthesis = self.Input:find(")", self.CurrentPosition) or #self.Input
+            local NextParenthesis = self.Input:find("%(", self.CurrentPosition) or #self.Input
             local NextSpace = self.Input:find(" ", self.CurrentPosition) or #self.Input
             local NextSemi = self.Input:find(";", self.CurrentPosition) or #self.Input
             local FinalCharacter
@@ -224,7 +224,6 @@ function CLexer:GetNextToken()
                     Token = CToken:new(Result, self.Tokens.VAR)
                 end
             end
-
             self.CurrentPosition = FinalCharacter
         end
     end
