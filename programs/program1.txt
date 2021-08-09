@@ -1,3 +1,7 @@
 START
-
+num i = 5;
+void func foo (num bar) {
+    print bar;
+}
+foo (i);
 FINISH

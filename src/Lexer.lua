@@ -45,6 +45,7 @@ CLexer.Tokens = {
     COMMA = "COMMA",
     FUNC = "FUNC",
     CALL = "CALL",
+    VOID_TYPE = "VOID"
 }
 
 function CLexer:new(Input)
@@ -174,6 +175,9 @@ function CLexer:GetNextToken()
         end,
         ["func"] = function()
             return CToken:new("func", self.Tokens.FUNC)
+        end,
+        ["void"] = function()
+            return CToken:new("void", self.Tokens.VOID_TYPE)
         end
     }
 

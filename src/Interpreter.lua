@@ -1,17 +1,16 @@
 local CLexer = require("src.Lexer")[1]
 local CParser = require("src.Parser")[1]
-local CSymbolTable = require("src.SymbolTable")[1]
+local CSymbolTable = require("src.SemanticAnalyser")[1]
 
 CInterpreter = { Lexer, Parser, SymbolTable, Tokens }
 CInterpreter.VariableTable = {}
-CInterpreter.FunctionTable = {}
 
 function CInterpreter:new(LexerInput)
     NewInterpreter = {}
     setmetatable(NewInterpreter, self)
     NewInterpreter.Lexer = CLexer:new(LexerInput)
     NewInterpreter.Parser = CParser:new(NewInterpreter.Lexer)
-    NewInterpreter.SymbolTable = CSymbolTable:new(NewInterpreter.Lexer.Tokens, self.VariableTable)
+    NewInterpreter.SymbolTable = CSymbolTable:new(NewInterpreter.Lexer.Tokens)
     NewInterpreter.Tokens = NewInterpreter.Lexer.Tokens
     self.__index = self
     return NewInterpreter
@@ -66,7 +65,6 @@ function CInterpreter:VariableEvaluator(CurrentNode)
             return self:VariableEvaluator(CurrentNode.RightNode) + self:VariableEvaluator(CurrentNode.LeftNode)
         end
     end
-    return 0
 end
 
 function CInterpreter:ConditionalEvaluator(CurrentNode)
@@ -117,7 +115,7 @@ function CInterpreter:FunctionEvaluator(CurrentNode)
         local Function = self:GetFunction(CurrentNode.LeftNode.Token.Value)
         -- Parameters
         for i = 1, #Function.LeftNode do
-            self:SetVariable(Function.LeftNode[i].Token.Value, self:VariableEvaluator(CurrentNode.RightNode[i]))
+            self:SetVariable(Function.LeftNode[i].NextNode.Token.Value, self:VariableEvaluator(CurrentNode.RightNode[i]))
         end
         return self:Interpret(Function.RightNode)
     end
@@ -148,20 +146,25 @@ function CInterpreter:Execute()
     local Root = self.Parser:Program()
 
     --print(Root[1].Token.Value)
-    --print(Root[1].CentreNode.Token.Value)
-    --print(#Root[1].LeftNode)
-    --print(Root[1].RightNode[1].Token.Value)
-    --print(Root[1].RightNode[1].NextNode.Token.Value)
-
+    --
+    --print()
     --print(Root[2].Token.Value)
-    --print(Root[2].LeftNode.Token.Value)
-    --print(#Root[2].RightNode)
+    --print(Root[2].CentreLeftNode.Token.Value)
+    --print(Root[2].CentreRightNode.Token.Value)
+    --print(Root[2].RightNode[1].Token.Value)
+    --print(Root[2].LeftNode[1].Token.Value)
+    --print(Root[2].LeftNode[1].NextNode.Token.Value)
+    --
+    --print()
+    --print(Root[3].Token.Value)
+    --print(Root[3].LeftNode.Token.Value)
+    --print(Root[3].RightNode[1].Token.Value)
 
     for i = 1, #Root do
-        self.SymbolTable:Evaluate(Root[i])
+        --self.SymbolTable:Evaluate(Root[i])
     end
 
-    self:Interpret(Root)
+    --self:Interpret(Root)
 end
 
 return { CInterpreter }

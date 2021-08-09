@@ -48,13 +48,44 @@ end
 function CParser:Statement()
     return ({
         [self.Tokens.NUM_TYPE] = function()
-            return self:Assign()
+            self:SetNextToken()
+            if (self.CurrentToken.Type == self.Tokens.FUNC) then
+                self:SetNextToken(self.LastToken)
+                return self:FunctionDeclaration()
+            else
+                self:SetNextToken(self.LastToken)
+                return self:Assign()
+            end
         end,
         [self.Tokens.STR_TYPE ] = function()
-            return self:Assign()
+            self:SetNextToken()
+            if (self.CurrentToken.Type == self.Tokens.FUNC) then
+                self:SetNextToken(self.LastToken)
+                return self:FunctionDeclaration()
+            else
+                self:SetNextToken(self.LastToken)
+                return self:Assign()
+            end
         end,
         [self.Tokens.BOOL_TYPE] = function()
-            return self:Assign()
+            self:SetNextToken()
+            if (self.CurrentToken.Type == self.Tokens.FUNC) then
+                self:SetNextToken(self.LastToken)
+                return self:FunctionDeclaration()
+            else
+                self:SetNextToken(self.LastToken)
+                return self:Assign()
+            end
+        end,
+        [self.Tokens.VOID_TYPE] = function()
+            self:SetNextToken()
+            if (self.CurrentToken.Type == self.Tokens.FUNC) then
+                self:SetNextToken(self.LastToken)
+                return self:FunctionDeclaration()
+            else
+                self:SetNextToken(self.LastToken)
+                return self:Assign()
+            end
         end,
         [self.Tokens.VAR] = function()
             self:SetNextToken()
@@ -81,19 +112,18 @@ function CParser:Statement()
         [self.Tokens.ADD] = function()
             return self:Expr()
         end,
-        [self.Tokens.FUNC] = function()
-            return self:FunctionDeclaration()
-        end
     })[self.CurrentToken.Type]()
 end
 
 function CParser:FunctionDeclaration()
+    local FuncType = self.CurrentToken
+    self:SetNextToken()
     local Func = self.CurrentToken
     self:SetNextToken()
     local FuncName = self.CurrentToken
     local Parameters = self:FunctionParameters()
     self:SetNextToken()
-    return CAST.CTernaryNode:new(Func, Parameters, CAST.CNode:new(FuncName), self:Statements())
+    return CAST.CQuaternaryNode:new(Func, Parameters, CAST.CNode:new(FuncName), CAST.CNode:new(FuncType),self:Statements())
 end
 
 function CParser:FunctionParameters()
@@ -103,10 +133,14 @@ function CParser:FunctionParameters()
         self:SetNextToken()
         if (self.CurrentToken.Type == self.Tokens.RPAREN) then
             break
+        elseif (self.CurrentToken.Type == self.Tokens.NUM_TYPE) then
+            local VarType = self.CurrentToken
+            self:SetNextToken()
+            table.insert(Parameters, CAST.CUnaryNode:new(VarType, CAST.CNode:new(self.CurrentToken)))
         elseif (self.CurrentToken.Type == self.Tokens.COMMA) then
             self:SetNextToken()
-        else
-            table.insert(Parameters, { Token = self.CurrentToken })
+        elseif (self.CurrentToken.Type == self.Tokens.VAR) then
+            table.insert(Parameters, CAST.CNode:new(self.CurrentToken))
         end
     end
     return Parameters
@@ -115,7 +149,7 @@ end
 function CParser:FunctionCall()
     local FuncName = self.CurrentToken
     local Parameters = self:FunctionParameters()
-    return CAST.CBinaryNode:new({ Value = "CALL", Type = self.Tokens.CALL }, CAST.CNode:new(FuncName), Parameters)
+    return CAST.CBinaryNode:new({ Value = "call", Type = self.Tokens.CALL }, CAST.CNode:new(FuncName), Parameters)
 end
 
 function CParser:Assign()
