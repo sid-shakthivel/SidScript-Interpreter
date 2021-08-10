@@ -1,3 +1,5 @@
+local Error = require("src.Error")
+
 CSymbol = { Name, Type, Scope }
 
 function CSymbol:new(Name, Type)
@@ -29,7 +31,7 @@ function CSymbolTable:GetSymbol(Name)
     if (self.Symbols[Name]) then
         return self.Symbols[Name]
     elseif (self.EnclosingScope == nil) then
-        error("ERROR: VARIABLE " .. Name .. " NOT FOUND")
+        Error:Error("ERROR: VARIABLE " .. Name .. " NOT FOUND")
     else
         return self.EnclosingScope:GetSymbol(Name)
     end
@@ -63,11 +65,12 @@ function CSemanticAnalyser:BuildSymbolTables(CurrentNode)
         table.insert(self.Scopes, self.CurrentScope)
         self.CurrentScope = self.CurrentScope.EnclosingScope
     elseif (CurrentNode.Token.Type == self.Tokens.ASSIGN) then
-        local NewSymbol = CSymbol:new(CurrentNode.LeftNode.NextNode.Token.Value, CurrentNode.LeftNode.Token.Type)
-        self.CurrentScope:SetSymbol(NewSymbol)
-    elseif (CurrentNode.Token.Type == self.Tokens.NUM_TYPE) then
+        return self:BuildSymbolTables(CurrentNode.LeftNode)
+    elseif (CurrentNode.Token.Type == self.Tokens.NUM_TYPE or CurrentNode.Token.Type == self.Tokens.STR_TYPE or CurrentNode.Token.Type == self.Tokens.BOOL_TYPE) then
         local NewSymbol = CSymbol:new(CurrentNode.NextNode.Token.Value, CurrentNode.Token.Type)
         self.CurrentScope:SetSymbol(NewSymbol)
+    elseif (CurrentNode.Token.Type == self.Tokens.VAR) then
+        local Symbol = self.CurrentScope:GetSymbol(CurrentNode.Token.Value)
     end
 end
 

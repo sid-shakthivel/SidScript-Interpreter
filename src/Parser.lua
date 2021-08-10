@@ -22,11 +22,11 @@ function CParser:Statements(IsExpectingRightBrace)
     while true do
         self:SetNextToken()
         if (self.CurrentToken.Type == self.Tokens.RBRACE) then
-            IsExpectingRightBrace = true
+            IsExpectingRightBrace = false
             break
         end
         if (self.CurrentToken.Type == self.Tokens.EOF) then
-            if (IsExpectingRightBrace == true) then
+            if (IsExpectingRightBrace == false) then
                 break
             else
                 Error:Error("PARSER ERROR: EXPECTED RIGHT BRACE BEFORE " .. self.CurrentToken.Type)

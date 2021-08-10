@@ -146,7 +146,7 @@ function CInterpreter:Execute()
     local Root = self.Parser:Program()
 
     for i = 1, #Root do
-        --self.SemanticAnalyser:BuildSymbolTables(Root[i])
+        self.SemanticAnalyser:BuildSymbolTables(Root[i])
     end
 
     --self:Interpret(Root)
