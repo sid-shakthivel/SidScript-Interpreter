@@ -1,15 +1,15 @@
-CToken = { Value, Type }
+CToken = { Value, Type}
 
-function CToken:new(value, type)
+function CToken:new(Value, Type)
     NewToken = {}
     setmetatable({}, self)
-    NewToken.Value = value
-    NewToken.Type = type
+    NewToken.Value = Value
+    NewToken.Type = Type
     self.__index = self
     return NewToken
 end
 
-CLexer = { CurrentPosition, Input, LastPosition }
+CLexer = { CurrentPosition, LastPosition, Input, InvertedTokens, LineNumber }
 
 CLexer.Tokens = {
     ADD = "+",
@@ -27,21 +27,21 @@ CLexer.Tokens = {
     EQUALS = "==",
     RBRACE = "}",
     LBRACE = "{",
-    VAR = "VAR",
-    NUM_TYPE = "NUM_TYPE",
-    STR_TYPE = "STR_TYPE",
-    BOOL_TYPE = "BOOL_TYPE",
-    VOID_TYPE = "VOID_TYPE",
+    NUM_TYPE = "num",
+    STR_TYPE = "str",
+    BOOL_TYPE = "bool",
+    VOID_TYPE = "void",
+    PRINT = "print",
+    IF = "if",
+    ELSE = "else",
+    WHILE = "while",
+    FOR = "for",
+    FUNC = "func",
+    CALL = "CALL",
     NUM = "NUM",
     STR = "STR",
     BOOL = "BOOL",
-    IF = "IF",
-    ELSE = "ELSE",
-    PRINT = "PRINT",
-    WHILE = "WHILE",
-    FOR = "FOR",
-    FUNC = "FUNC",
-    CALL = "CALL",
+    VAR = "VAR",
 }
 
 function CLexer:new(Input)
@@ -49,8 +49,68 @@ function CLexer:new(Input)
     setmetatable(NewLexer, self)
     NewLexer.Input = Input
     NewLexer.CurrentPosition = 1
+    NewLexer.InvertedTokens = {}
+    NewLexer.LineNumber = 0
     self.__index = self
     return NewLexer
+end
+
+function CLexer:GetNextToken()
+    self.LastPosition = self.CurrentPosition
+    if (self.CurrentPosition > #self.Input) then
+        return CToken:new("EOF", self.Tokens.EOF)
+    end
+
+    local Character = self.Input:sub(self.CurrentPosition, self.CurrentPosition)
+    local Token
+
+    while (Character == ' ' or Character == '\n') do
+        if (Character == '\n') then
+            self.LineNumber = self.LineNumber + 1
+        end
+        self.CurrentPosition = self.CurrentPosition + 1
+        Character = self.Input:sub(self.CurrentPosition, self.CurrentPosition)
+    end
+
+    if (tonumber(Character)) then
+        Token = CToken:new(self:GetNumber(), self.Tokens.NUM)
+    elseif (Character == "=" and self:Peek() == "=") then
+        Token = CToken:new("==", self.Tokens.EQUALS)
+    elseif (self.InvertedTokens[Character] ~= nil) then
+        Token = CToken:new(Character, self.Tokens[self.InvertedTokens[Character]])
+    elseif (Character == '`') then
+        local NextTemplateLiteral = self.Input:find("`", (self.CurrentPosition+1))
+        local Result = self.Input:sub(self.CurrentPosition+1, NextTemplateLiteral)
+        Token = CToken:new(Result, self.Tokens.STR)
+        self.CurrentPosition = NextTemplateLiteral
+    else
+        local NextParenthesis = self.Input:find("%(", self.CurrentPosition) or #self.Input
+        local NextSpace = self.Input:find(" ", self.CurrentPosition) or #self.Input
+        local NextSemi = self.Input:find(";", self.CurrentPosition) or #self.Input
+        local Answer = math.min(NextParenthesis, NextSpace, NextSemi)
+        local Result = self.Input:sub(self.CurrentPosition, (Answer-1))
+
+        if (self.InvertedTokens[Result]) then
+            Token = CToken:new(Result, self.Tokens[self.InvertedTokens[Result]])
+        elseif (Result == "true") then
+            Token = CToken:new(Result, self.Tokens.BOOL)
+        elseif (Result == "false") then
+            Token = CToken:new(Result, self.Tokens.BOOL)
+        else
+            Token = CToken:new(Result, self.Tokens.VAR)
+        end
+
+        self.CurrentPosition = Answer - 1
+    end
+
+    self.CurrentPosition = self.CurrentPosition + 1
+    return Token
+end
+
+function CLexer:InvertTokens()
+    for k,v in pairs(self.Tokens) do
+        self.InvertedTokens[v] = k
+    end
 end
 
 function CLexer:GetNumber()
@@ -70,168 +130,6 @@ end
 
 function CLexer:Peek()
     return self.Input:sub((self.CurrentPosition+1), (self.CurrentPosition+1))
-end
-
-function CLexer:GetNextToken()
-    if (self.CurrentPosition > #self.Input) then
-        return CToken:new(' ', self.Tokens.EOF)
-    end
-
-    self.LastPosition = self.CurrentPosition
-    local Character = self.Input:sub(self.CurrentPosition, self.CurrentPosition)
-    local Token
-
-    while Character == ' ' do
-        self.CurrentPosition = self.CurrentPosition + 1
-        Character = self.Input:sub(self.CurrentPosition, self.CurrentPosition)
-    end
-
-    SingleCharacterCases = {
-        ['+'] = function()
-            return CToken:new('+', self.Tokens.ADD)
-        end,
-        ['-'] = function()
-            return CToken:new('-', self.Tokens.MIN)
-        end,
-        ['*'] = function()
-            return CToken:new('*', self.Tokens.MUL)
-        end,
-        ['/'] = function()
-            return CToken:new('/', self.Tokens.DIV)
-        end,
-        ['('] = function()
-            return CToken:new('(', self.Tokens.LPAREN)
-        end,
-        [')'] = function()
-            return CToken:new(')', self.Tokens.RPAREN)
-        end,
-        ['.'] = function()
-            return CToken:new('.', self.Tokens.DOT)
-        end,
-        [';'] = function()
-            return CToken:new(';', self.Tokens.SEMI)
-        end,
-        ['='] = function()
-            local Test = self:Peek()
-            if (Test == '=') then
-                self.CurrentPosition = self.CurrentPosition + 1
-                return CToken:new('==', self.Tokens.EQUALS)
-            else
-                return CToken:new('=', self.Tokens.ASSIGN)
-            end
-        end,
-        ['>'] = function()
-            return CToken:new('>', self.Tokens.GREATER)
-        end,
-        ['<'] = function()
-            return CToken:new('<', self.Tokens.LESSER)
-        end,
-        [':'] = function()
-            return CToken:new(':', self.Tokens.COLON)
-        end,
-        ['{'] = function()
-            return CToken:new('{', self.Tokens.LBRACE)
-        end,
-        ['}'] = function()
-            return CToken:new('}', self.Tokens.RBRACE)
-        end
-    }
-
-    MultiCharacterCases = {
-        ["START"] = function()
-            return CToken:new("START", self.Tokens.START)
-        end,
-        ["FINISH"] = function()
-            return CToken:new("FINISH", self.Tokens.FINISH)
-        end,
-        ["num"] = function()
-            return CToken:new("NUM_TYPE", self.Tokens.NUM_TYPE)
-        end,
-        ["str"] = function()
-            return CToken:new("STR_TYPE", self.Tokens.STR_TYPE)
-        end,
-        ["bool"] = function()
-            return CToken:new("BOOL_TYPE", self.Tokens.BOOL_TYPE)
-        end,
-        ["true"] = function()
-            return CToken:new("true", self.Tokens.BOOL)
-        end,
-        ["false"] = function()
-            return CToken:new("false", self.Tokens.BOOL)
-        end,
-        ["if"] = function()
-            return CToken:new("if", self.Tokens.IF)
-        end,
-        ["else"] = function()
-            return CToken:new("else", self.Tokens.ELSE)
-        end,
-        ["print"] = function ()
-            return CToken:new("print", self.Tokens.PRINT)
-        end,
-        ["while"] = function()
-            return CToken:new("while", self.Tokens.WHILE)
-        end,
-        ["for"] = function()
-            return CToken:new("for", self.Tokens.FOR)
-        end,
-        ["func"] = function()
-            return CToken:new("func", self.Tokens.FUNC)
-        end,
-        ["void"] = function()
-            return CToken:new("void", self.Tokens.VOID_TYPE)
-        end
-    }
-
-    if (tonumber(Character)) then
-        Token = CToken:new(self:GetNumber(), self.Tokens.NUM)
-    else
-        if (SingleCharacterCases[Character]) then
-            Token = SingleCharacterCases[Character]()
-        else
-            local OldPosition = self.CurrentPosition
-
-            local NextParenthesis = self.Input:find("%(", self.CurrentPosition) or #self.Input
-            local NextSpace = self.Input:find(" ", self.CurrentPosition) or #self.Input
-            local NextSemi = self.Input:find(";", self.CurrentPosition) or #self.Input
-            local FinalCharacter
-            local Result
-
-            if (NextSpace < NextSemi and NextSpace < NextParenthesis) then
-                NextSpace = NextSpace - 1
-                Result = self.Input:sub(OldPosition, NextSpace)
-                FinalCharacter = NextSpace
-            elseif (NextSemi < NextSpace and NextSemi < NextParenthesis) then
-                NextSemi = NextSemi - 1
-                Result = self.Input:sub(OldPosition, NextSemi)
-                FinalCharacter = NextSemi
-            elseif (NextParenthesis < NextSpace and NextParenthesis < NextSemi) then
-                NextParenthesis = NextParenthesis - 1
-                Result = self.Input:sub(OldPosition, NextParenthesis)
-                FinalCharacter = NextParenthesis
-            else
-                NextSpace = NextSpace - 1
-                Result = self.Input:sub(OldPosition, NextSpace)
-                FinalCharacter = NextSpace
-            end
-
-            if (MultiCharacterCases[Result]) then
-                Token = MultiCharacterCases[Result]()
-            else
-                if (Result:sub(1, 1) == "`") then
-                    local NextStringLiteral = string.find(self.Input, "`", FinalCharacter)
-                    Result = string.sub(self.Input, self.CurrentPosition, NextStringLiteral)
-                    Token = CToken:new(string.gsub(Result, "`", ""), self.Tokens.STR)
-                    FinalCharacter = NextStringLiteral
-                else
-                    Token = CToken:new(Result, self.Tokens.VAR)
-                end
-            end
-            self.CurrentPosition = FinalCharacter
-        end
-    end
-
-    self.CurrentPosition = self.CurrentPosition + 1
-    return Token
 end
 
 function CLexer:SetLastToken()

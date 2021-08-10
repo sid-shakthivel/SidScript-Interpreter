@@ -1,7 +1,5 @@
-function test()
-    variable = "hello"
-end
+test = 5
+best = 23
+hest = 1
 
-test()
-
-print(variable)
+print(math.min(test, best, hest))

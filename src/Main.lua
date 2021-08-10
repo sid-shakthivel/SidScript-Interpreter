@@ -6,7 +6,7 @@ local Program = ""
 local CurrentLine = File:read("*line")
 
 while CurrentLine ~= nil do
-    Program = Program .. " " .. CurrentLine
+    Program = Program .. "\n" .. CurrentLine
     CurrentLine = File:read("*line")
 end
 
@@ -16,19 +16,14 @@ Interpreter = CInterpreter:new(Program)
 Interpreter:Execute()
 
 --Lexer = CLexer:new(Program)
---print(Lexer:GetNextToken().Value)
---print(Lexer:GetNextToken().Value)
---print(Lexer:GetNextToken().Value)
---print(Lexer:GetNextToken().Value)
---print(Lexer:GetNextToken().Value)
---print(Lexer:GetNextToken().Value)
---print(Lexer:GetNextToken().Value)
---print(Lexer:GetNextToken().Value)
---print(Lexer:GetNextToken().Value)
---print(Lexer:GetNextToken().Value)
---print(Lexer:GetNextToken().Value)
---print(Lexer:GetNextToken().Value)
---print(Lexer:GetNextToken().Value)
---print(Lexer:GetNextToken().Value)
---print(Lexer:GetNextToken().Value)
---print(Lexer:GetNextToken().Value)
+--Lexer:InvertTokens()
+--Lexer:GetNextToken()
+--Lexer:GetNextToken()
+--Lexer:GetNextToken()
+--Lexer:GetNextToken()
+--Lexer:GetNextToken()
+--Lexer:GetNextToken()
+--Lexer:GetNextToken()
+--Lexer:GetNextToken()
+--Lexer:GetNextToken()
+--Lexer:GetNextToken()

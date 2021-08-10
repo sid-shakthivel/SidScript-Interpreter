@@ -75,6 +75,8 @@ function CParser:Statement()
     elseif (Type == self.Tokens.ADD) then
         return self:Expr()
     else
+        print(self.CurrentToken.Type)
+        print(self.Tokens.NUM_TYPE)
         Error:Error("PARSER ERROR: INSTRUCTION " .. self.CurrentToken.Value .. " NOT DEFINED")
     end
 end

@@ -9,6 +9,7 @@ function CInterpreter:new(LexerInput)
     NewInterpreter = {}
     setmetatable(NewInterpreter, self)
     NewInterpreter.Lexer = CLexer:new(LexerInput)
+    NewInterpreter.Lexer:InvertTokens()
     NewInterpreter.Parser = CParser:new(NewInterpreter.Lexer)
     NewInterpreter.SemanticAnalyser = CSemanticAnalyser:new(NewInterpreter.Lexer.Tokens)
     NewInterpreter.Tokens = NewInterpreter.Lexer.Tokens
@@ -145,9 +146,9 @@ end
 function CInterpreter:Execute()
     local Root = self.Parser:Program()
 
-    for i = 1, #Root do
-        self.SemanticAnalyser:BuildSymbolTables(Root[i])
-    end
+    --for i = 1, #Root do
+    --    self.SemanticAnalyser:BuildSymbolTables(Root[i])
+    --end
 
     --self:Interpret(Root)
 end
