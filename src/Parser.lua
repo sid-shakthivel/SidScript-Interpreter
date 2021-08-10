@@ -13,16 +13,24 @@ function CParser:new(Lexer)
 end
 
 function CParser:Program()
-    local Statements = self:Statements()
+    local Statements = self:Statements(false)
     return Statements
 end
 
-function CParser:Statements()
+function CParser:Statements(IsExpectingRightBrace)
     local Statements = {}
     while true do
         self:SetNextToken()
-        if (self.CurrentToken.Type == self.Tokens.RBRACE or self.CurrentToken.Token == self.Tokens.EOF) then
+        if (self.CurrentToken.Type == self.Tokens.RBRACE) then
+            IsExpectingRightBrace = true
             break
+        end
+        if (self.CurrentToken.Type == self.Tokens.EOF) then
+            if (IsExpectingRightBrace == true) then
+                break
+            else
+                Error:Error("PARSER ERROR: EXPECTED RIGHT BRACE BEFORE " .. self.CurrentToken.Type)
+            end
         end
         table.insert(Statements, self:Statement())
         if (self.CurrentToken.Type == self.Tokens.RBRACE) then
@@ -79,7 +87,7 @@ function CParser:FunctionDeclaration()
     local FuncName = self.CurrentToken
     local Parameters = self:FunctionParameters()
     self:LeftBraceTest()
-    return CAST.CQuaternaryNode:new(Func, Parameters, CAST.CNode:new(FuncName), CAST.CNode:new(FuncType),self:Statements())
+    return CAST.CQuaternaryNode:new(Func, Parameters, CAST.CNode:new(FuncName), CAST.CNode:new(FuncType),self:Statements(true))
 end
 
 function CParser:FunctionParameters()
@@ -124,11 +132,11 @@ function CParser:IfElse()
     local If = self.CurrentToken
     local Condition = self:Condition()
     self:LeftBraceTest()
-    local FirstBranch = self:Statements()
+    local FirstBranch = self:Statements(true)
     self:SetNextToken()
     if (self.CurrentToken.Type == self.Tokens.ELSE) then
         self:LeftBraceTest()
-        return CAST.CTernaryNode:new(If, FirstBranch, Condition , self:Statements())
+        return CAST.CTernaryNode:new(If, FirstBranch, Condition , self:Statements(true))
     else
         self:SetNextToken(self.LastToken)
         return CAST.CTernaryNode:new(If, FirstBranch , Condition, nil)
@@ -145,7 +153,7 @@ function CParser:While()
     local While = self.CurrentToken
     local Condition = self:Condition()
     self:LeftBraceTest()
-    local Statements = self:Statements()
+    local Statements = self:Statements(true)
     return CAST.CBinaryNode:new(While, Condition, Statements)
 end
 
@@ -158,7 +166,7 @@ function CParser:For()
     self:SemicolonTest()
     local Expr = self:Expr()
     self:SetNextToken()
-    return CAST.CQuaternaryNode(For, Assign, Condition, Expr, self:Statements())
+    return CAST.CQuaternaryNode(For, Assign, Condition, Expr, self:Statements(true))
 end
 
 function CParser:Expr()

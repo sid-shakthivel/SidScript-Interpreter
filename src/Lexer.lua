@@ -77,7 +77,7 @@ function CLexer:Peek()
 end
 
 function CLexer:GetNextToken()
-    if (self.CurrentPosition >= #self.Input) then
+    if (self.CurrentPosition > #self.Input) then
         return CToken:new(' ', self.Tokens.EOF)
     end
 
@@ -89,11 +89,6 @@ function CLexer:GetNextToken()
         self.CurrentPosition = self.CurrentPosition + 1
         Character = self.Input:sub(self.CurrentPosition, self.CurrentPosition)
     end
-
-    --if (self:Peek() == '=' and Character == '=') then
-    --    self.CurrentPosition = self.CurrentPosition + 2
-    --    return CToken:new('==', self.Tokens.EQUALS)
-    --end
 
     SingleCharacterCases = {
         ['+'] = function()
@@ -218,6 +213,7 @@ function CLexer:GetNextToken()
                 Result = self.Input:sub(OldPosition, NextParenthesis)
                 FinalCharacter = NextParenthesis
             else
+                NextSpace = NextSpace - 1
                 Result = self.Input:sub(OldPosition, NextSpace)
                 FinalCharacter = NextSpace
             end
