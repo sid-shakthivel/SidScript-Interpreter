@@ -175,14 +175,14 @@ end
 
 function CParser:For()
     local For = self.CurrentToken
+    self:SetNextToken()
     local Assign = self:Assign()
     self:SemicolonTest()
     local Condition = self:Condition()
-    self:SetNextToken()
     self:SemicolonTest()
     local Expr = self:Expr()
     self:SetNextToken()
-    return CAST.CQuaternaryNode(For, Assign, Condition, Expr, self:Statements(true))
+    return CAST.CQuaternaryNode:new(For, Assign, Condition, Expr, self:Statements(true))
 end
 
 function CParser:Expr()

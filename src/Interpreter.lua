@@ -19,17 +19,17 @@ function CInterpreter:new(LexerInput)
     return NewInterpreter
 end
 
-function CInterpreter:VariableEvaluator(CurrentNode)
+function CInterpreter:ExpressionAssignmentEvaluator(CurrentNode)
     if (CurrentNode.Token.Type == self.Tokens.ASSIGN) then
         local Variable = CurrentNode.LeftNode.Token.Value
         if (CurrentNode.LeftNode.NextNode) then
-            Variable = self:VariableEvaluator(CurrentNode.LeftNode)
+            Variable = self:ExpressionAssignmentEvaluator(CurrentNode.LeftNode)
         end
-        local Value = self:VariableEvaluator(CurrentNode.RightNode)
+        local Value = self:ExpressionAssignmentEvaluator(CurrentNode.RightNode)
         self.CallStack:Peek():SetItem(Variable, Value)
         return self.CallStack:Peek():GetItem(Variable)
     elseif (CurrentNode.Token.Type == self.Tokens.NUM_TYPE or CurrentNode.Token.Type == self.Tokens.STR_TYPE or CurrentNode.Token.Type == self.Tokens.BOOL_TYPE) then
-        return self:VariableEvaluator(CurrentNode.NextNode)
+        return self:ExpressionAssignmentEvaluator(CurrentNode.NextNode)
     elseif (CurrentNode.Token.Type == self.Tokens.NUM or CurrentNode.Token.Type == self.Tokens.STR or CurrentNode.Token.Type == self.Tokens.BOOL) then
         return CurrentNode.Token.Value
     elseif (CurrentNode.Token.Type == self.Tokens.VAR) then
@@ -39,16 +39,16 @@ function CInterpreter:VariableEvaluator(CurrentNode)
             return self.CallStack:Peek():GetItem(CurrentNode.Token.Value)
         end
     elseif (CurrentNode.Token.Type == self.Tokens.MUL) then
-        return self:VariableEvaluator(CurrentNode.RightNode) * self:VariableEvaluator(CurrentNode.LeftNode)
+        return self:ExpressionAssignmentEvaluator(CurrentNode.RightNode) * self:ExpressionAssignmentEvaluator(CurrentNode.LeftNode)
     elseif (CurrentNode.Token.Type == self.Tokens.MIN) then
-        return self:VariableEvaluator(CurrentNode.RightNode) - self:VariableEvaluator(CurrentNode.LeftNode)
+        return self:ExpressionAssignmentEvaluator(CurrentNode.RightNode) - self:ExpressionAssignmentEvaluator(CurrentNode.LeftNode)
     elseif (CurrentNode.Token.Type == self.Tokens.DIV) then
-        return self:VariableEvaluator(CurrentNode.RightNode) / self:VariableEvaluator(CurrentNode.LeftNode)
+        return self:ExpressionAssignmentEvaluator(CurrentNode.RightNode) / self:ExpressionAssignmentEvaluator(CurrentNode.LeftNode)
     elseif (CurrentNode.Token.Type == self.Tokens.ADD) then
         if (CurrentNode.NextNode) then
-            return self:VariableEvaluator(CurrentNode.NextNode) + 1
+            return self:ExpressionAssignmentEvaluator(CurrentNode.NextNode) + 1
         else
-            return self:VariableEvaluator(CurrentNode.RightNode) + self:VariableEvaluator(CurrentNode.LeftNode)
+            return self:ExpressionAssignmentEvaluator(CurrentNode.RightNode) + self:ExpressionAssignmentEvaluator(CurrentNode.LeftNode)
         end
     end
 end
@@ -63,11 +63,11 @@ function CInterpreter:ConditionalEvaluator(CurrentNode)
         end
         return 0
     elseif (CurrentNode.Token.Type == self.Tokens.EQUALS) then
-        return self:VariableEvaluator(CurrentNode.LeftNode) == self:VariableEvaluator(CurrentNode.RightNode)
+        return self:ExpressionAssignmentEvaluator(CurrentNode.LeftNode) == self:ExpressionAssignmentEvaluator(CurrentNode.RightNode)
     elseif (CurrentNode.Token.Type == self.Tokens.GREATER) then
-        return self:VariableEvaluator(CurrentNode.LeftNode) > self:VariableEvaluator(CurrentNode.RightNode)
+        return self:ExpressionAssignmentEvaluator(CurrentNode.LeftNode) < self:ExpressionAssignmentEvaluator(CurrentNode.RightNode)
     elseif (CurrentNode.Token.Type == self.Tokens.LESSER) then
-        return self:VariableEvaluator(CurrentNode.LeftNode) < self:VariableEvaluator(CurrentNode.RightNode)
+        return self:ExpressionAssignmentEvaluator(CurrentNode.LeftNode) > self:ExpressionAssignmentEvaluator(CurrentNode.RightNode)
     end
 end
 
@@ -81,14 +81,18 @@ function CInterpreter:IterativeEvaluator(CurrentNode)
             end
         end
     elseif (CurrentNode.Token.Type == self.Tokens.FOR) then
-        local Variable = self:VariableEvaluator(CurrentNode.LeftNode)
+        local Variable = self:ExpressionAssignmentEvaluator(CurrentNode.LeftNode)
+        local VariableName = CurrentNode.LeftNode.Token.Value
+        if (CurrentNode.LeftNode.NextNode) then
+            VariableName = CurrentNode.NextNode.Token.Value
+        end
         while true do
             if (self:ConditionalEvaluator(CurrentNode.CentreLeftNode) == true) then
                 self:Interpret(CurrentNode.RightNode)
             else
                 break
             end
-            self.StackFrame:Peek():SetItem(Variable.Name, self:VariableEvaluator(CurrentNode.CentreRightNode))
+            self.CallStack:Peek():SetItem(VariableName, self:ExpressionAssignmentEvaluator(CurrentNode.CentreRightNode))
         end
     end
     return 0
@@ -96,27 +100,28 @@ end
 
 function CInterpreter:FunctionEvaluator(CurrentNode)
     if (CurrentNode.Token.Type == self.Tokens.FUNC) then
-        self.CallStack:Peek():SetItem(CurrentNode.CentreNode.Token.Value, CurrentNode)
+        self.CallStack:Peek():SetItem(CurrentNode.CentreLeftNode.Token.Value, CurrentNode)
     elseif (CurrentNode.Token.Type == self.Tokens.CALL) then
         local Function = self.CallStack:Peek():GetItem(CurrentNode.LeftNode.Token.Value)
-        self.CallStack:Push(CSTackFrame:new(CurrentNode.LeftNode.Token.Value), 2)
+        local NewStackFrame = CSTackFrame:new(CurrentNode.LeftNode.Token.Value, 2)
+        self.CallStack:Push(NewStackFrame)
         for i = 1, #Function.LeftNode do
-            self.CallStack:Peek():SetItem(self:VariableEvaluator(Function.LeftNode[i]), self:VariableEvaluator(CurrentNode.RightNode[i]))
+            self.CallStack:Peek():SetItem(self:ExpressionAssignmentEvaluator(Function.LeftNode[i]), self:ExpressionAssignmentEvaluator(CurrentNode.RightNode[i]))
         end
-        self:Interpret(Function.RightNode)
+        --self:Interpret(Function.RightNode)
         self.CallStack:Pop()
     end
 end
 
 function CInterpreter:MainEvaluator(CurrentNode)
     if (CurrentNode.Token.Type == self.Tokens.ASSIGN) then
-        return self:VariableEvaluator(CurrentNode)
+        return self:ExpressionAssignmentEvaluator(CurrentNode)
     elseif (CurrentNode.Token.Type == self.Tokens.IF) then
         return self:ConditionalEvaluator(CurrentNode)
     elseif (CurrentNode.Token.Type == self.Tokens.WHILE or CurrentNode.Token.Type == self.Tokens.FOR) then
         return self:IterativeEvaluator(CurrentNode)
     elseif (CurrentNode.Token.Type == self.Tokens.PRINT) then
-        print(self:VariableEvaluator(CurrentNode.NextNode))
+        print(self:ExpressionAssignmentEvaluator(CurrentNode.NextNode))
     elseif (CurrentNode.Token.Type == self.Tokens.FUNC or CurrentNode.Token.Type == self.Tokens.CALL) then
         return self:FunctionEvaluator(CurrentNode)
     end
@@ -137,7 +142,7 @@ function CInterpreter:Execute()
     end
 
     self.CallStack:Push(CSTackFrame:new("Main", 1))
-    self:Interpret(Root)
+    --self:Interpret(Root)
     self.CallStack:Pop()
 end
 

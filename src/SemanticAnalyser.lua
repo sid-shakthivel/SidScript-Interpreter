@@ -19,6 +19,8 @@ function CFunctionSymbol:new(Name, Type, Parameters)
     NewFunctionSymbol.Name = Name
     NewFunctionSymbol.Type = Type
     NewFunctionSymbol.Parameters = Parameters
+    self.__index = self
+    return NewFunctionSymbol
 end
 
 CSymbolTable = { Name, Symbols, EnclosingScope }
