@@ -75,7 +75,7 @@ function CParser:Statement()
     elseif (Type == self.Tokens.ADD) then
         return self:Expr()
     else
-        Error:Error(tostring("PARSER ERROR: INSTRUCTION " .. self.CurrentToken.Value .. " NOT DEFINED"))
+        Error:Error("PARSER ERROR: INSTRUCTION " .. self.CurrentToken.Value .. " NOT DEFINED")
     end
 end
 
@@ -199,7 +199,6 @@ end
 
 function CParser:Value()
     self:SetNextToken()
-
     local Cases = {
         [self.Tokens.STR] = function ()
             return CAST.CNode:new(self.CurrentToken)
@@ -220,11 +219,10 @@ function CParser:Value()
             return self:expr()
         end,
     }
-
     if (Cases[self.CurrentToken.Type]) then
         return Cases[self.CurrentToken.Type]()
     else
-        Error:Error(tostring("PARSER ERROR: INVALID SYNTAX " .. self.CurrentToken.Value))
+        Error:Error("PARSER ERROR: INVALID SYNTAX " .. self.CurrentToken.Value)
     end
 end
 
@@ -245,14 +243,14 @@ end
 function CParser:SemicolonTest()
     self:SetNextToken()
     if (self.CurrentToken.Type ~= self.Tokens.SEMI) then
-        Error:Error(tostring("PARSER ERROR: SEMICOLON EXCEPTED AFTER " .. self.CurrentToken.Value))
+        Error:Error("PARSER ERROR: SEMICOLON EXCEPTED AFTER " .. self.CurrentToken.Value)
     end
 end
 
 function CParser:LeftBraceTest()
     self:SetNextToken()
     if (self.CurrentToken.Type ~= self.Tokens.LBRACE) then
-        Error:Error(tostring("PARSER ERROR: EXPECTED LEFT BRACE BEFORE " .. self.CurrentToken.Value))
+        Error:Error("PARSER ERROR: EXPECTED LEFT BRACE BEFORE " .. self.CurrentToken.Value)
     end
 end
 

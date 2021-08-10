@@ -31,7 +31,7 @@ function CSymbolTable:GetSymbol(Name)
     if (self.Symbols[Name]) then
         return self.Symbols[Name]
     elseif (self.EnclosingScope == nil) then
-        Error:Error("ERROR: VARIABLE " .. Name .. " NOT FOUND")
+        return nil
     else
         return self.EnclosingScope:GetSymbol(Name)
     end
@@ -67,10 +67,15 @@ function CSemanticAnalyser:BuildSymbolTables(CurrentNode)
     elseif (CurrentNode.Token.Type == self.Tokens.ASSIGN) then
         return self:BuildSymbolTables(CurrentNode.LeftNode)
     elseif (CurrentNode.Token.Type == self.Tokens.NUM_TYPE or CurrentNode.Token.Type == self.Tokens.STR_TYPE or CurrentNode.Token.Type == self.Tokens.BOOL_TYPE) then
+        if (self.CurrentScope:GetSymbol(CurrentNode.NextNode.Token.Value) ~= nil) then
+            Error:Error("SEMANTIC ERROR: VARIABLE " .. CurrentNode.NextNode.Token.Value .. " ALREADY DECLARED")
+        end
         local NewSymbol = CSymbol:new(CurrentNode.NextNode.Token.Value, CurrentNode.Token.Type)
         self.CurrentScope:SetSymbol(NewSymbol)
     elseif (CurrentNode.Token.Type == self.Tokens.VAR) then
-        local Symbol = self.CurrentScope:GetSymbol(CurrentNode.Token.Value)
+        if (self.CurrentScope:GetSymbol(CurrentNode.Token.Value) == nil) then
+            Error:Error("SEMANTIC ERROR: VARIABLE " .. CurrentNode.Token.Value .. " NOT DECLARED")
+        end
     end
 end
 
