@@ -1,9 +1,10 @@
 local CLexer = require("src.Lexer")[1]
 local CParser = require("src.Parser")[1]
 local CSemanticAnalyser = require("src.SemanticAnalyser")[1]
+local CStack = require("src.Stack")[1]
+local CSTackFrame = require("src.StackFrame")[1]
 
-CInterpreter = { Lexer, Parser, SemanticAnalyser, Tokens }
-CInterpreter.VariableTable = {}
+CInterpreter = { Lexer, Parser, SemanticAnalyser, Tokens, CallStack }
 
 function CInterpreter:new(LexerInput)
     NewInterpreter = {}
@@ -13,25 +14,9 @@ function CInterpreter:new(LexerInput)
     NewInterpreter.Parser = CParser:new(NewInterpreter.Lexer)
     NewInterpreter.SemanticAnalyser = CSemanticAnalyser:new(NewInterpreter.Lexer.Tokens)
     NewInterpreter.Tokens = NewInterpreter.Lexer.Tokens
+    NewInterpreter.CallStack = CStack:new()
     self.__index = self
     return NewInterpreter
-end
-
-function CInterpreter:SetVariable(Name, Value)
-    self.VariableTable[Name] = Value
-end
-
-function CInterpreter:GetVariable(Name)
-    return self.VariableTable[Name]
-end
-
-function CInterpreter:SetFunction(Name, Value)
-    -- Value = AST
-    self.VariableTable[Name] = Value
-end
-
-function CInterpreter:GetFunction(Name)
-    return self.VariableTable[Name]
 end
 
 function CInterpreter:VariableEvaluator(CurrentNode)
@@ -41,17 +26,17 @@ function CInterpreter:VariableEvaluator(CurrentNode)
             Variable = self:VariableEvaluator(CurrentNode.LeftNode)
         end
         local Value = self:VariableEvaluator(CurrentNode.RightNode)
-        self:SetVariable(Variable, Value)
-        return self:GetVariable(Variable)
+        self.CallStack:Peek():SetItem(Variable, Value)
+        return self.CallStack:Peek():GetItem(Variable)
     elseif (CurrentNode.Token.Type == self.Tokens.NUM_TYPE or CurrentNode.Token.Type == self.Tokens.STR_TYPE or CurrentNode.Token.Type == self.Tokens.BOOL_TYPE) then
         return self:VariableEvaluator(CurrentNode.NextNode)
     elseif (CurrentNode.Token.Type == self.Tokens.NUM or CurrentNode.Token.Type == self.Tokens.STR or CurrentNode.Token.Type == self.Tokens.BOOL) then
         return CurrentNode.Token.Value
     elseif (CurrentNode.Token.Type == self.Tokens.VAR) then
-        if (self:GetVariable(CurrentNode.Token.Value) == nil) then
+        if (self.CallStack:Peek():GetItem(CurrentNode.Token.Value) == nil) then
             return CurrentNode.Token.Value
         else
-            return self:GetVariable(CurrentNode.Token.Value)
+            return self.CallStack:Peek():GetItem(CurrentNode.Token.Value)
         end
     elseif (CurrentNode.Token.Type == self.Tokens.MUL) then
         return self:VariableEvaluator(CurrentNode.RightNode) * self:VariableEvaluator(CurrentNode.LeftNode)
@@ -103,7 +88,7 @@ function CInterpreter:IterativeEvaluator(CurrentNode)
             else
                 break
             end
-            self:SetVariable(Variable.Name, self:VariableEvaluator(CurrentNode.CentreRightNode))
+            self.StackFrame:Peek():SetItem(Variable.Name, self:VariableEvaluator(CurrentNode.CentreRightNode))
         end
     end
     return 0
@@ -111,14 +96,15 @@ end
 
 function CInterpreter:FunctionEvaluator(CurrentNode)
     if (CurrentNode.Token.Type == self.Tokens.FUNC) then
-        self:SetFunction(CurrentNode.CentreNode.Token.Value, CurrentNode)
+        self.CallStack:Peek():SetItem(CurrentNode.CentreNode.Token.Value, CurrentNode)
     elseif (CurrentNode.Token.Type == self.Tokens.CALL) then
-        local Function = self:GetFunction(CurrentNode.LeftNode.Token.Value)
-        -- Parameters
+        local Function = self.CallStack:Peek():GetItem(CurrentNode.LeftNode.Token.Value)
+        self.CallStack:Push(CSTackFrame:new(CurrentNode.LeftNode.Token.Value), 2)
         for i = 1, #Function.LeftNode do
-            self:SetVariable(Function.LeftNode[i].NextNode.Token.Value, self:VariableEvaluator(CurrentNode.RightNode[i]))
+            self.CallStack:Peek():SetItem(self:VariableEvaluator(Function.LeftNode[i]), self:VariableEvaluator(CurrentNode.RightNode[i]))
         end
-        return self:Interpret(Function.RightNode)
+        self:Interpret(Function.RightNode)
+        self.CallStack:Pop()
     end
 end
 
@@ -146,11 +132,13 @@ end
 function CInterpreter:Execute()
     local Root = self.Parser:Program()
 
-    --for i = 1, #Root do
-    --    self.SemanticAnalyser:BuildSymbolTables(Root[i])
-    --end
+    for i = 1, #Root do
+        self.SemanticAnalyser:BuildSymbolTables(Root[i])
+    end
 
-    --self:Interpret(Root)
+    self.CallStack:Push(CSTackFrame:new("Main", 1))
+    self:Interpret(Root)
+    self.CallStack:Pop()
 end
 
 return { CInterpreter }

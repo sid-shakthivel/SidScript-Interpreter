@@ -1,4 +1,2 @@
-num i = 0;
-while i < 5 {
-    print i;
-}
+num i = 5;
+print i;

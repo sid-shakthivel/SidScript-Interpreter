@@ -1,6 +1,6 @@
 local Error = require("src.Error")
 
-CSymbol = { Name, Type, Scope }
+CSymbol = { Name, Type }
 
 function CSymbol:new(Name, Type)
     NewSymbol = {}
@@ -9,6 +9,16 @@ function CSymbol:new(Name, Type)
     NewSymbol.Type = Type
     self.__index = self
     return NewSymbol
+end
+
+CFunctionSymbol = { Name, Type, Parameters }
+
+function CFunctionSymbol:new(Name, Type, Parameters)
+    NewFunctionSymbol = {}
+    setmetatable(NewFunctionSymbol, self)
+    NewFunctionSymbol.Name = Name
+    NewFunctionSymbol.Type = Type
+    NewFunctionSymbol.Parameters = Parameters
 end
 
 CSymbolTable = { Name, Symbols, EnclosingScope }
@@ -52,7 +62,7 @@ end
 
 function CSemanticAnalyser:BuildSymbolTables(CurrentNode)
     if (CurrentNode.Token.Type == self.Tokens.FUNC) then
-        local NewSymbol = CSymbol:new(CurrentNode.CentreLeftNode.Token.Value, CurrentNode.Token.Type)
+        local NewSymbol = CFunctionSymbol:new(CurrentNode.CentreLeftNode.Token.Value, CurrentNode.Token.Type, CurrentNode.LeftNode)
         self.CurrentScope:SetSymbol(NewSymbol)
         local NewSymbolTable = CSymbolTable:new(CurrentNode.CentreLeftNode.Token.Value, self.CurrentScope)
         self.CurrentScope = NewSymbolTable
@@ -74,7 +84,15 @@ function CSemanticAnalyser:BuildSymbolTables(CurrentNode)
         self.CurrentScope:SetSymbol(NewSymbol)
     elseif (CurrentNode.Token.Type == self.Tokens.VAR) then
         if (self.CurrentScope:GetSymbol(CurrentNode.Token.Value) == nil) then
-            Error:Error("SEMANTIC ERROR: VARIABLE " .. CurrentNode.Token.Value .. " NOT DECLARED")
+            Error:Error("SEMANTIC ERROR: VARIABLE " .. CurrentNode.Token.Value .. " NOT DECLARED ON LINE " .. CurrentNode.Token.LineNumber)
+        end
+    elseif (CurrentNode.Token.Type == self.Tokens.CALL) then
+        local Function = self.CurrentScope:GetSymbol(CurrentNode.LeftNode.Token.Value)
+        if (#Function.Parameters ~= #CurrentNode.RightNode) then
+            Error:Error("SEMANTIC ERROR: INSUFFICIENT ARGUMENTS PASSED TO FUNCTION " .. Function.CentreLeftNode.Token.Value)
+        end
+        for i = 1, #CurrentNode.RightNode do
+            self:BuildSymbolTables(CurrentNode.RightNode[i])
         end
     end
 end

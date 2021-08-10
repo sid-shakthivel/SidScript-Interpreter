@@ -29,7 +29,7 @@ function CParser:Statements(IsExpectingRightBrace)
             if (IsExpectingRightBrace == false) then
                 break
             else
-                Error:Error("PARSER ERROR: EXPECTED RIGHT BRACE BEFORE " .. self.CurrentToken.Type)
+                Error:Error("PARSER ERROR: EXPECTED RIGHT BRACE ON LINE " .. self.CurrentToken.LineNumber)
             end
         end
         table.insert(Statements, self:Statement())
@@ -75,9 +75,7 @@ function CParser:Statement()
     elseif (Type == self.Tokens.ADD) then
         return self:Expr()
     else
-        print(self.CurrentToken.Type)
-        print(self.Tokens.NUM_TYPE)
-        Error:Error("PARSER ERROR: INSTRUCTION " .. self.CurrentToken.Value .. " NOT DEFINED")
+        Error:Error("PARSER ERROR: INSTRUCTION " .. self.CurrentToken.Value .. " NOT DEFINED ON LINE " .. self.CurrentToken.LineNumber)
     end
 end
 
@@ -99,7 +97,7 @@ function CParser:FunctionParameters()
         self:SetNextToken()
         if (self.CurrentToken.Type == self.Tokens.RPAREN) then
             break
-        elseif (self.CurrentToken.Type == self.Tokens.NUM_TYPE) then
+        elseif (self.CurrentToken.Type == self.Tokens.NUM_TYPE or self.CurrentToken.Type == self.Tokens.STR_TYPE or self.CurrentToken.Type == self.Tokens.BOOL_TYPE) then
             local VarType = self.CurrentToken
             self:SetNextToken()
             table.insert(Parameters, CAST.CUnaryNode:new(VarType, CAST.CNode:new(self.CurrentToken)))
@@ -114,8 +112,24 @@ end
 
 function CParser:FunctionCall()
     local FuncName = self.CurrentToken
-    local Parameters = self:FunctionParameters()
-    return CAST.CBinaryNode:new({ Value = "call", Type = self.Tokens.CALL }, CAST.CNode:new(FuncName), Parameters)
+    local Parameters = self:FunctionCallParameters()
+    return CAST.CBinaryNode:new({ Value = "CALL", Type = self.Tokens.CALL }, CAST.CNode:new(FuncName), Parameters)
+end
+
+function CParser:FunctionCallParameters()
+    local Parameters = {}
+    self:SetNextToken()
+    while true do
+        self:SetNextToken()
+        if (self.CurrentToken.Type == self.Tokens.RPAREN) then
+            break
+        elseif (self.CurrentToken.Type == self.Tokens.COMMA) then
+            self:SetNextToken()
+        else
+            table.insert(Parameters, CAST.CNode:new(self.CurrentToken))
+        end
+    end
+    return Parameters
 end
 
 function CParser:Assign()
@@ -224,7 +238,7 @@ function CParser:Value()
     if (Cases[self.CurrentToken.Type]) then
         return Cases[self.CurrentToken.Type]()
     else
-        Error:Error("PARSER ERROR: INVALID SYNTAX " .. self.CurrentToken.Value)
+        Error:Error("PARSER ERROR: INVALID SYNTAX " .. self.CurrentToken.Value .. " ON LINE " .. self.CurrentToken.LineNumber)
     end
 end
 
@@ -245,14 +259,14 @@ end
 function CParser:SemicolonTest()
     self:SetNextToken()
     if (self.CurrentToken.Type ~= self.Tokens.SEMI) then
-        Error:Error("PARSER ERROR: SEMICOLON EXCEPTED AFTER " .. self.CurrentToken.Value)
+        Error:Error("PARSER ERROR: EXCEPTED SEMICOLON ON LINE " .. self.CurrentToken.LineNumber)
     end
 end
 
 function CParser:LeftBraceTest()
     self:SetNextToken()
     if (self.CurrentToken.Type ~= self.Tokens.LBRACE) then
-        Error:Error("PARSER ERROR: EXPECTED LEFT BRACE BEFORE " .. self.CurrentToken.Value)
+        Error:Error("PARSER ERROR: EXPECTED LEFT BRACE ON LINE " .. self.CurrentToken.LineNumber)
     end
 end
 
