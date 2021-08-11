@@ -68,7 +68,7 @@ function CSemanticAnalyser:Analyse(CurrentNode)
         self:BuildSymbolTable(CurrentNode.CentreLeftNode.Token.Value, ConcatenateTable(CurrentNode.LeftNode, CurrentNode.RightNode))
     elseif (CurrentNode.Token.Type == self.Tokens.ASSIGN) then
         local LeftSide = self:Analyse(CurrentNode.LeftNode)
-        local RightSide = self:ExpressionEvaluator(CurrentNode.RightNode)
+        local RightSide = self:GetType(CurrentNode.RightNode)
         if (LeftSide.Type ~= RightSide.Type) then
             Error:Error("SEMANTIC ERROR: VARIABLE OF TYPE " .. LeftSide.Type .. " CAN'T BE ASSIGNED TO " .. RightSide.Type .. " ON LINE " .. CurrentNode.Token.LineNumber)
         end
@@ -76,15 +76,7 @@ function CSemanticAnalyser:Analyse(CurrentNode)
         if (self.CurrentScope:GetSymbol(CurrentNode.NextNode.Token.Value) ~= nil) then
             Error:Error("SEMANTIC ERROR: VARIABLE " .. CurrentNode.NextNode.Token.Value .. " ALREADY DECLARED")
         end
-        local Type = nil
-        if (CurrentNode.Token.Type == self.Tokens.NUM_TYPE) then
-            Type = self.Tokens.NUM
-        elseif (CurrentNode.Token.Type == self.Tokens.STR_TYPE) then
-            Type = self.Tokens.STR
-        else
-            Type = self.Tokens.BOOL
-        end
-        local NewSymbol = CSymbol:new(CurrentNode.NextNode.Token.Value, Type)
+        local NewSymbol = CSymbol:new(CurrentNode.NextNode.Token.Value, self:GetFormattedVariableType(CurrentNode.Token))
         self.CurrentScope:SetSymbol(NewSymbol)
         return self.CurrentScope:GetSymbol(CurrentNode.NextNode.Token.Value)
     elseif (CurrentNode.Token.Type == self.Tokens.VAR) then
@@ -96,10 +88,10 @@ function CSemanticAnalyser:Analyse(CurrentNode)
     elseif (CurrentNode.Token.Type == self.Tokens.CALL) then
         local Function = self.CurrentScope:GetSymbol(CurrentNode.LeftNode.Token.Value)
         if (#Function.Parameters ~= #CurrentNode.RightNode) then
-            Error:Error("SEMANTIC ERROR: INSUFFICIENT ARGUMENTS PASSED TO FUNCTION " .. Function.CentreLeftNode.Token.Value)
+            Error:Error("SEMANTIC ERROR: INSUFFICIENT ARGUMENTS PASSED TO FUNCTION " .. Function.Name)
         end
         for i = 1, #Function.Parameters do
-            if (#Function.Parameters[i].Type ~= CurrentNode.RightNode[i].Type) then
+            if (self:GetFormattedVariableType(Function.Parameters[i].Token) ~= self:GetType(CurrentNode.RightNode[i]).Type) then
                 Error:Error("SEMANTIC ERROR: ARGUMENTS TYPES MUST MATCH FUNCTION PARAMETERS TYPES ON LINE " .. CurrentNode.Token.LineNumber)
             end
         end
@@ -118,7 +110,7 @@ function CSemanticAnalyser:Analyse(CurrentNode)
         self:Analyse(CurrentNode.CentreLeftNode)
         self:BuildSymbolTable(("for " .. math.random(1000000)), CurrentNode.RightNode)
     elseif (CurrentNode.Token.Type == self.Tokens.LESSER or CurrentNode.Token.Type == self.Tokens.GREATER or CurrentNode.Token.Type == self.Tokens.EQUALS) then
-        if (self:ExpressionEvaluator(CurrentNode.LeftNode).Type ~= self:ExpressionEvaluator(CurrentNode.RightNode).Type) then
+        if (self:GetType(CurrentNode.LeftNode).Type ~= self:GetType(CurrentNode.RightNode).Type) then
             Error:Error("SEMANTIC ERROR: COMPARISON OF DIFFERENT TYPES ON LINE " .. CurrentNode.Token.LineNumber)
         end
     end
@@ -133,41 +125,53 @@ function CSemanticAnalyser:BuildSymbolTable(Name, Body)
     self.CurrentScope = NewScope.EnclosingScope
 end
 
-function CSemanticAnalyser:ExpressionEvaluator(CurrentNode)
+function CSemanticAnalyser:GetFormattedVariableType(Token)
+    if (Token.Type == self.Tokens.NUM_TYPE) then
+        return self.Tokens.NUM
+    elseif (Token.Type == self.Tokens.STR_TYPE) then
+        return self.Tokens.STR
+    elseif (Token.Type == self.Tokens.BOOL_TYPE) then
+        return self.Tokens.BOOL
+    else
+        Error:Error("SEMANTIC ERROR: UNEXPECTED IDENTIFIER " .. Token.Value)
+    end
+end
+
+function CSemanticAnalyser:GetType(CurrentNode)
     if (CurrentNode.Token.Type == self.Tokens.NUM_TYPE or CurrentNode.Token.Type == self.Tokens.STR_TYPE or CurrentNode.Token.Type == self.Tokens.BOOL_TYPE) then
-        return self:ExpressionEvaluator(CurrentNode.NextNode)
+        return self:GetType(CurrentNode.NextNode)
     elseif (CurrentNode.Token.Type == self.Tokens.VAR) then
         return self.CurrentScope:GetSymbol(CurrentNode.Token.Value)
     elseif (CurrentNode.Token.Type == self.Tokens.NUM or CurrentNode.Token.Type == self.Tokens.STR or CurrentNode.Token.Type == self.Tokens.BOOL) then
         return CurrentNode.Token
     elseif (CurrentNode.Token.Type == self.Tokens.MUL) then
-        if (self:ExpressionEvaluator(CurrentNode.RightNode).Type == self.Tokens.NUM and self:ExpressionEvaluator(CurrentNode.LeftNode)) then
-            return self:ExpressionEvaluator(CurrentNode.RightNode)
+        if (self:GetType(CurrentNode.RightNode).Type == self.Tokens.NUM and self:GetType(CurrentNode.LeftNode)) then
+            return self:GetType(CurrentNode.RightNode)
         else
             Error:Error("SEMANTIC ERROR: MULTIPLICATION OF NON NUMBERS ON LINE " .. CurrentNode.Token.LineNumber)
         end
     elseif (CurrentNode.Token.Type == self.Tokens.MIN) then
-        if (self:ExpressionEvaluator(CurrentNode.RightNode).Type == self.Tokens.NUM and self:ExpressionEvaluator(CurrentNode.LeftNode)) then
-            return self:ExpressionEvaluator(CurrentNode.RightNode)
+        if (self:GetType(CurrentNode.RightNode).Type == self.Tokens.NUM and self:GetType(CurrentNode.LeftNode)) then
+            return self:GetType(CurrentNode.RightNode)
         else
             Error:Error("SEMANTIC ERROR: SUBTRACTION OF NON NUMBERS ON LINE " .. CurrentNode.Token.LineNumber)
         end
     elseif (CurrentNode.Token.Type == self.Tokens.DIV) then
-        if (self:ExpressionEvaluator(CurrentNode.RightNode).Type == self.Tokens.NUM and self:ExpressionEvaluator(CurrentNode.LeftNode)) then
-            return self:ExpressionEvaluator(CurrentNode.RightNode)
+        if (self:GetType(CurrentNode.RightNode).Type == self.Tokens.NUM and self:GetType(CurrentNode.LeftNode)) then
+            return self:GetType(CurrentNode.RightNode)
         else
             Error:Error("SEMANTIC ERROR: DIVISION OF NON NUMBERS ON LINE " .. CurrentNode.Token.LineNumber)
         end
     elseif (CurrentNode.Token.Type == self.Tokens.ADD) then
         if (CurrentNode.NextNode) then
-            if (self:ExpressionEvaluator(CurrentNode.NextNode).Type == self.Tokens.NUM) then
-                return self:ExpressionEvaluator(CurrentNode.NextNode)
+            if (self:GetType(CurrentNode.NextNode).Type == self.Tokens.NUM) then
+                return self:GetType(CurrentNode.NextNode)
             else
                 Error:Error("SEMANTIC ERROR: ADDITION OF NON NUMBERS ON LINE " .. CurrentNode.Token.LineNumber)
             end
         else
-            if (self:ExpressionEvaluator(CurrentNode.RightNode).Type == self.Tokens.NUM and self:ExpressionEvaluator(CurrentNode.LeftNode)) then
-                return self:ExpressionEvaluator(CurrentNode.RightNode)
+            if (self:GetType(CurrentNode.RightNode).Type == self.Tokens.NUM and self:GetType(CurrentNode.LeftNode)) then
+                return self:GetType(CurrentNode.RightNode)
             else
                 Error:Error("SEMANTIC ERROR: ADDITION OF NON NUMBERS ON LINE " .. CurrentNode.Token.LineNumber)
             end
@@ -176,10 +180,14 @@ function CSemanticAnalyser:ExpressionEvaluator(CurrentNode)
 end
 
 function ConcatenateTable(Table1, Table2)
-    for i = 1, #Table2 do
-        Table1[#Table1+1] = Table2[i]
+    local NewTable = {}
+    for i = 1, #Table1 do
+        NewTable[i] = Table1[i]
     end
-    return Table1
+    for i = 1, #Table2 do
+        NewTable[#Table1+i] = Table2[i]
+    end
+    return NewTable
 end
 
 
