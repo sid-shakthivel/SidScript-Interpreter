@@ -1,5 +1,8 @@
-test = 5
-best = 23
-hest = 1
+test = 43
 
-print(math.min(test, best, hest))
+for i = 1, 5 do
+    local test = 23
+    print(test)
+end
+
+print(test)

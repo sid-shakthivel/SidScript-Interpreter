@@ -95,20 +95,20 @@ function CInterpreter:IterativeEvaluator(CurrentNode)
     return 0
 end
 
---function CInterpreter:FunctionEvaluator(CurrentNode)
---    if (CurrentNode.Token.Type == self.Tokens.FUNC) then
---        self.CallStack:Peek():SetItem(CurrentNode.CentreLeftNode.Token.Value, CurrentNode)
---    elseif (CurrentNode.Token.Type == self.Tokens.CALL) then
---        local Function = self.CallStack:Peek():GetItem(CurrentNode.LeftNode.Token.Value)
---        local NewStackFrame = CSTackFrame:new(CurrentNode.LeftNode.Token.Value, 2)
---        self.CallStack:Push(NewStackFrame)
---        for i = 1, #Function.LeftNode do
---            self.CallStack:Peek():SetItem(self:ExpressionAssignmentEvaluator(Function.LeftNode[i]), self:ExpressionAssignmentEvaluator(CurrentNode.RightNode[i]))
---        end
---        --self:Interpret(Function.RightNode)
---        self.CallStack:Pop()
---    end
---end
+function CInterpreter:FunctionEvaluator(CurrentNode)
+    if (CurrentNode.Token.Type == self.Tokens.FUNC) then
+        self.CallStack:Peek():SetItem(CurrentNode.CentreLeftNode.Token.Value, CurrentNode)
+    elseif (CurrentNode.Token.Type == self.Tokens.CALL) then
+        local Function = self.CallStack:Peek():GetItem(CurrentNode.LeftNode.Token.Value)
+        local NewStackFrame = CSTackFrame:new(CurrentNode.LeftNode.Token.Value, 2)
+        self.CallStack:Push(NewStackFrame)
+        for i = 1, #Function.LeftNode do
+            self.CallStack:Peek():SetItem(self:ExpressionAssignmentEvaluator(Function.LeftNode[i]), self:ExpressionAssignmentEvaluator(CurrentNode.RightNode[i]))
+        end
+        self:Interpret(Function.RightNode)
+        self.CallStack:Pop()
+    end
+end
 
 function CInterpreter:MainEvaluator(CurrentNode)
     if (CurrentNode.Token.Type == self.Tokens.ASSIGN) then
@@ -126,9 +126,11 @@ function CInterpreter:MainEvaluator(CurrentNode)
 end
 
 function CInterpreter:Interpret(Root)
+    local CurrentLine
     for i = 1, #Root do
-        self:MainEvaluator(Root[i])
+        CurrentLine = self:MainEvaluator(Root[i])
     end
+    return CurrentLine
 end
 
 function CInterpreter:Execute()

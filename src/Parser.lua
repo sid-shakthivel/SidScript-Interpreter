@@ -75,18 +75,18 @@ function CParser:Statement()
     elseif (Type == self.Tokens.ADD) then
         return self:Expr()
     else
-        Error:Error("PARSER ERROR: INSTRUCTION " .. self.CurrentToken.Value .. " NOT DEFINED ON LINE " .. self.CurrentToken.LineNumber)
+        Error:Error("PARSER ERROR: IDENTIFIER " .. self.CurrentToken.Value .. " NOT DEFINED ON LINE " .. self.CurrentToken.LineNumber)
     end
 end
 
 function CParser:FunctionDeclaration()
     local FuncType = self.CurrentToken
-    self:SetNextToken()
+    self:CheckSetNextToken(self.Tokens.FUNC)
     local Func = self.CurrentToken
-    self:SetNextToken()
+    self:CheckSetNextToken(self.Tokens.VAR)
     local FuncName = self.CurrentToken
     local Parameters = self:FunctionParameters()
-    self:LeftBraceTest()
+    self:CheckSetNextToken(self.Tokens.LBRACE)
     return CAST.CQuaternaryNode:new(Func, Parameters, CAST.CNode:new(FuncName), CAST.CNode:new(FuncType),self:Statements(true))
 end
 
@@ -105,6 +105,8 @@ function CParser:FunctionParameters()
             self:SetNextToken()
         elseif (self.CurrentToken.Type == self.Tokens.VAR) then
             table.insert(Parameters, CAST.CNode:new(self.CurrentToken))
+        else
+            Error:Error("PARSER ERROR: UNEXPECTED IDENTIFIER " .. self.CurrentToken.Value .. " ON LINE " .. self.CurrentToken.LineNumber)
         end
     end
     return Parameters
@@ -134,12 +136,12 @@ end
 
 function CParser:Assign()
     if (self.CurrentToken.Type == self.Tokens.VAR) then
-        self:SetNextToken()
+        self:CheckSetNextToken(self.Tokens.ASSIGN)
         return CAST.CBinaryNode:new(self.CurrentToken, CAST.CNode:new(self.LastToken), self:Expr())
     else
         local Type = self.CurrentToken
-        self:SetNextToken()
-        self:SetNextToken()
+        self:CheckSetNextToken(self.Tokens.VAR)
+        self:CheckSetNextToken(self.Tokens.ASSIGN)
         return CAST.CBinaryNode:new(self.CurrentToken, CAST.CUnaryNode:new(Type, CAST.CNode:new(self.LastToken)), self:Expr())
     end
 end
@@ -147,11 +149,11 @@ end
 function CParser:IfElse()
     local If = self.CurrentToken
     local Condition = self:Condition()
-    self:LeftBraceTest()
+    self:CheckSetNextToken(self.Tokens.LBRACE)
     local FirstBranch = self:Statements(true)
     self:SetNextToken()
     if (self.CurrentToken.Type == self.Tokens.ELSE) then
-        self:LeftBraceTest()
+        self:CheckSetNextToken(self.Tokens.LBRACE)
         return CAST.CTernaryNode:new(If, FirstBranch, Condition , self:Statements(true))
     else
         self:SetNextToken(self.LastToken)
@@ -159,16 +161,10 @@ function CParser:IfElse()
     end
 end
 
-function CParser:Condition()
-    local Expr1 = self:Expr()
-    self:SetNextToken()
-    return CAST.CBinaryNode:new(self.CurrentToken, Expr1, self:Expr())
-end
-
 function CParser:While()
     local While = self.CurrentToken
     local Condition = self:Condition()
-    self:LeftBraceTest()
+    self:CheckSetNextToken(self.Tokens.LBRACE)
     local Statements = self:Statements(true)
     return CAST.CBinaryNode:new(While, Condition, Statements)
 end
@@ -181,8 +177,17 @@ function CParser:For()
     local Condition = self:Condition()
     self:SemicolonTest()
     local Expr = self:Expr()
-    self:SetNextToken()
+    self:CheckSetNextToken(self.Tokens.LBRACE)
     return CAST.CQuaternaryNode:new(For, Assign, Condition, Expr, self:Statements(true))
+end
+
+function CParser:Condition()
+    local Expr1 = self:Expr()
+    self:SetNextToken()
+    if (self.CurrentToken.Type ~= self.Tokens.EQUALS and self.CurrentToken.Type ~= self.Tokens.LESSER and self.CurrentToken.Type ~= self.Tokens.GREATER) then
+        Error:Error("UNEXPECTED IDENTIFIER " .. self.CurrentToken.Value .. " ON LINE " .. self.CurrentToken.LineNumber)
+    end
+    return CAST.CBinaryNode:new(self.CurrentToken, Expr1, self:Expr())
 end
 
 function CParser:Expr()
@@ -204,7 +209,7 @@ function CParser:Term()
     while true do
         self:SetNextToken()
         if (self.CurrentToken.Type == self.Tokens.MUL or self.CurrentToken.Type == self.Tokens.DIV) then
-            Node =  CAST.CBinaryNode:new(self.CurrentToken, Node, self:Value())
+            Node = CAST.CBinaryNode:new(self.CurrentToken, Node, self:Value())
         else
             self:SetNextToken(self.LastToken)
             break
@@ -265,10 +270,10 @@ function CParser:SemicolonTest()
     end
 end
 
-function CParser:LeftBraceTest()
+function CParser:CheckSetNextToken(Type)
     self:SetNextToken()
-    if (self.CurrentToken.Type ~= self.Tokens.LBRACE) then
-        Error:Error("PARSER ERROR: EXPECTED LEFT BRACE ON LINE " .. self.CurrentToken.LineNumber)
+    if (self.CurrentToken.Type ~= Type) then
+        Error:Error("UNEXPECTED IDENTIFIER " .. self.CurrentToken.Value .. " ON LINE " .. self.CurrentToken.LineNumber)
     end
 end
 
