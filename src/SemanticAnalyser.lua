@@ -118,8 +118,8 @@ function CSemanticAnalyser:Analyse(CurrentNode)
         self:Analyse(CurrentNode.CentreLeftNode)
         self:BuildSymbolTable(("for " .. math.random(1000000)), CurrentNode.RightNode)
     elseif (CurrentNode.Token.Type == self.Tokens.LESSER or CurrentNode.Token.Type == self.Tokens.GREATER or CurrentNode.Token.Type == self.Tokens.EQUALS) then
-        if (self:ExpressionEvaluator(CurrentNode.LeftSide).Type ~= self:ExpressionEvaluator(CurrentNode.RightNode).Type) then
-            Error:Error("SEMANTIC ERROR: COMPARISON OF DIFFERENT TYPES ON LINE " .. self.CurrentNode.LineNumber)
+        if (self:ExpressionEvaluator(CurrentNode.LeftNode).Type ~= self:ExpressionEvaluator(CurrentNode.RightNode).Type) then
+            Error:Error("SEMANTIC ERROR: COMPARISON OF DIFFERENT TYPES ON LINE " .. CurrentNode.Token.LineNumber)
         end
     end
 end
@@ -137,7 +137,7 @@ function CSemanticAnalyser:ExpressionEvaluator(CurrentNode)
     if (CurrentNode.Token.Type == self.Tokens.NUM_TYPE or CurrentNode.Token.Type == self.Tokens.STR_TYPE or CurrentNode.Token.Type == self.Tokens.BOOL_TYPE) then
         return self:ExpressionEvaluator(CurrentNode.NextNode)
     elseif (CurrentNode.Token.Type == self.Tokens.VAR) then
-        return self:GetSymbol(CurrentNode.Token.Value)
+        return self.CurrentScope:GetSymbol(CurrentNode.Token.Value)
     elseif (CurrentNode.Token.Type == self.Tokens.NUM or CurrentNode.Token.Type == self.Tokens.STR or CurrentNode.Token.Type == self.Tokens.BOOL) then
         return CurrentNode.Token
     elseif (CurrentNode.Token.Type == self.Tokens.MUL) then
