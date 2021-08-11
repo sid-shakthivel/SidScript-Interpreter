@@ -245,7 +245,7 @@ function CParser:Value()
     if (Cases[self.CurrentToken.Type]) then
         return Cases[self.CurrentToken.Type]()
     else
-        Error:Error("PARSER ERROR: INVALID SYNTAX " .. self.CurrentToken.Value .. " ON LINE " .. self.CurrentToken.LineNumber)
+        Error:Error("PARSER ERROR: UNEXPECTED IDENTIFIER " .. self.CurrentToken.Value .. " ON LINE " .. self.CurrentToken.LineNumber)
     end
 end
 
