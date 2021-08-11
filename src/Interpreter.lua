@@ -81,11 +81,8 @@ function CInterpreter:IterativeEvaluator(CurrentNode)
             end
         end
     elseif (CurrentNode.Token.Type == self.Tokens.FOR) then
-        local Variable = self:ExpressionAssignmentEvaluator(CurrentNode.LeftNode)
-        local VariableName = CurrentNode.LeftNode.Token.Value
-        if (CurrentNode.LeftNode.NextNode) then
-            VariableName = CurrentNode.NextNode.Token.Value
-        end
+        local VariableName = self:ExpressionAssignmentEvaluator(CurrentNode.LeftNode.LeftNode)
+        self:ExpressionAssignmentEvaluator(CurrentNode.LeftNode)
         while true do
             if (self:ConditionalEvaluator(CurrentNode.CentreLeftNode) == true) then
                 self:Interpret(CurrentNode.RightNode)
@@ -98,20 +95,20 @@ function CInterpreter:IterativeEvaluator(CurrentNode)
     return 0
 end
 
-function CInterpreter:FunctionEvaluator(CurrentNode)
-    if (CurrentNode.Token.Type == self.Tokens.FUNC) then
-        self.CallStack:Peek():SetItem(CurrentNode.CentreLeftNode.Token.Value, CurrentNode)
-    elseif (CurrentNode.Token.Type == self.Tokens.CALL) then
-        local Function = self.CallStack:Peek():GetItem(CurrentNode.LeftNode.Token.Value)
-        local NewStackFrame = CSTackFrame:new(CurrentNode.LeftNode.Token.Value, 2)
-        self.CallStack:Push(NewStackFrame)
-        for i = 1, #Function.LeftNode do
-            self.CallStack:Peek():SetItem(self:ExpressionAssignmentEvaluator(Function.LeftNode[i]), self:ExpressionAssignmentEvaluator(CurrentNode.RightNode[i]))
-        end
-        --self:Interpret(Function.RightNode)
-        self.CallStack:Pop()
-    end
-end
+--function CInterpreter:FunctionEvaluator(CurrentNode)
+--    if (CurrentNode.Token.Type == self.Tokens.FUNC) then
+--        self.CallStack:Peek():SetItem(CurrentNode.CentreLeftNode.Token.Value, CurrentNode)
+--    elseif (CurrentNode.Token.Type == self.Tokens.CALL) then
+--        local Function = self.CallStack:Peek():GetItem(CurrentNode.LeftNode.Token.Value)
+--        local NewStackFrame = CSTackFrame:new(CurrentNode.LeftNode.Token.Value, 2)
+--        self.CallStack:Push(NewStackFrame)
+--        for i = 1, #Function.LeftNode do
+--            self.CallStack:Peek():SetItem(self:ExpressionAssignmentEvaluator(Function.LeftNode[i]), self:ExpressionAssignmentEvaluator(CurrentNode.RightNode[i]))
+--        end
+--        --self:Interpret(Function.RightNode)
+--        self.CallStack:Pop()
+--    end
+--end
 
 function CInterpreter:MainEvaluator(CurrentNode)
     if (CurrentNode.Token.Type == self.Tokens.ASSIGN) then
@@ -142,7 +139,7 @@ function CInterpreter:Execute()
     end
 
     self.CallStack:Push(CSTackFrame:new("Main", 1))
-    --self:Interpret(Root)
+    self:Interpret(Root)
     self.CallStack:Pop()
 end
 

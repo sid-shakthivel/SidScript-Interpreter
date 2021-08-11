@@ -229,7 +229,9 @@ function CParser:Value()
             return CAST.CNode:new(self.CurrentToken)
         end,
         [self.Tokens.ADD or self.Tokens.MIN] = function()
-            return CAST.CUnaryNode:new(self,CurrentToken, self:Value())
+            local Operation = self.CurrentToken
+            local Value = self:Value()
+            return CAST.CUnaryNode:new(Operation, Value)
         end,
         [self.Tokens.LPAREN] = function()
             return self:expr()
