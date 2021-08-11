@@ -1,4 +1,0 @@
-num i = 23;
-if i == 23 {
-    print `correct`;
-}

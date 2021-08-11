@@ -61,8 +61,6 @@ function CSemanticAnalyser:new(Tokens)
     return NewSemanticAnalyser
 end
 
--- COMPARE CONDITIONS (MAKE SURE THEY ARE OF THE SAME TYPE)
--- COMPARE TYPES OF PARAMETER
 function CSemanticAnalyser:Analyse(CurrentNode)
     if (CurrentNode.Token.Type == self.Tokens.FUNC) then
         local NewSymbol = CFunctionSymbol:new(CurrentNode.CentreLeftNode.Token.Value, CurrentNode.Token.Type, CurrentNode.LeftNode)
@@ -100,17 +98,29 @@ function CSemanticAnalyser:Analyse(CurrentNode)
         if (#Function.Parameters ~= #CurrentNode.RightNode) then
             Error:Error("SEMANTIC ERROR: INSUFFICIENT ARGUMENTS PASSED TO FUNCTION " .. Function.CentreLeftNode.Token.Value)
         end
+        for i = 1, #Function.Parameters do
+            if (#Function.Parameters[i].Type ~= CurrentNode.RightNode[i].Type) then
+                Error:Error("SEMANTIC ERROR: ARGUMENTS TYPES MUST MATCH FUNCTION PARAMETERS TYPES ON LINE " .. CurrentNode.Token.LineNumber)
+            end
+        end
     elseif (CurrentNode.Token.Type == self.Tokens.IF) then
+        self:Analyse(CurrentNode.CentreNode)
         self.CurrentScope = NewSymbolTable.EnclosingScope
         self:BuildSymbolTable(("if " .. math.random(1000000)), CurrentNode.LeftNode)
         if (CurrentNode.RightNode ~= nil) then
             self:BuildSymbolTable(("else " .. math.random(1000000)), CurrentNode.RightNode)
         end
     elseif (CurrentNode.Token.Type == self.Tokens.WHILE) then
+        self:Analyse(CurrentNode.LeftNode)
         self:BuildSymbolTable(("while " .. math.random(1000000)), CurrentNode.RightNode)
     elseif (CurrentNode.Token.Type == self.Tokens.FOR) then
         self:Analyse(CurrentNode.LeftNode)
+        self:Analyse(CurrentNode.CentreLeftNode)
         self:BuildSymbolTable(("for " .. math.random(1000000)), CurrentNode.RightNode)
+    elseif (CurrentNode.Token.Type == self.Tokens.LESSER or CurrentNode.Token.Type == self.Tokens.GREATER or CurrentNode.Token.Type == self.Tokens.EQUALS) then
+        if (self:ExpressionEvaluator(CurrentNode.LeftSide).Type ~= self:ExpressionEvaluator(CurrentNode.RightNode).Type) then
+            Error:Error("SEMANTIC ERROR: COMPARISON OF DIFFERENT TYPES ON LINE " .. self.CurrentNode.LineNumber)
+        end
     end
 end
 
@@ -134,32 +144,32 @@ function CSemanticAnalyser:ExpressionEvaluator(CurrentNode)
         if (self:ExpressionEvaluator(CurrentNode.RightNode).Type == self.Tokens.NUM and self:ExpressionEvaluator(CurrentNode.LeftNode)) then
             return self:ExpressionEvaluator(CurrentNode.RightNode)
         else
-            Error:Error("SEMANTIC ERROR: MULTIPLICATION OF NON NUMBERS IS NOT POSSIBLE ON LINE " .. CurrentNode.Token.LineNumber)
+            Error:Error("SEMANTIC ERROR: MULTIPLICATION OF NON NUMBERS ON LINE " .. CurrentNode.Token.LineNumber)
         end
     elseif (CurrentNode.Token.Type == self.Tokens.MIN) then
         if (self:ExpressionEvaluator(CurrentNode.RightNode).Type == self.Tokens.NUM and self:ExpressionEvaluator(CurrentNode.LeftNode)) then
             return self:ExpressionEvaluator(CurrentNode.RightNode)
         else
-            Error:Error("SEMANTIC ERROR: SUBTRACTION OF NON NUMBERS IS NOT POSSIBLE ON LINE " .. CurrentNode.Token.LineNumber)
+            Error:Error("SEMANTIC ERROR: SUBTRACTION OF NON NUMBERS ON LINE " .. CurrentNode.Token.LineNumber)
         end
     elseif (CurrentNode.Token.Type == self.Tokens.DIV) then
         if (self:ExpressionEvaluator(CurrentNode.RightNode).Type == self.Tokens.NUM and self:ExpressionEvaluator(CurrentNode.LeftNode)) then
             return self:ExpressionEvaluator(CurrentNode.RightNode)
         else
-            Error:Error("SEMANTIC ERROR: DIVISION OF NON NUMBERS IS NOT POSSIBLE ON LINE " .. CurrentNode.Token.LineNumber)
+            Error:Error("SEMANTIC ERROR: DIVISION OF NON NUMBERS ON LINE " .. CurrentNode.Token.LineNumber)
         end
     elseif (CurrentNode.Token.Type == self.Tokens.ADD) then
         if (CurrentNode.NextNode) then
             if (self:ExpressionEvaluator(CurrentNode.NextNode).Type == self.Tokens.NUM) then
                 return self:ExpressionEvaluator(CurrentNode.NextNode)
             else
-                Error:Error("SEMANTIC ERROR: ADDITION OF NON NUMBERS IS NOT POSSIBLE ON LINE " .. CurrentNode.Token.LineNumber)
+                Error:Error("SEMANTIC ERROR: ADDITION OF NON NUMBERS ON LINE " .. CurrentNode.Token.LineNumber)
             end
         else
             if (self:ExpressionEvaluator(CurrentNode.RightNode).Type == self.Tokens.NUM and self:ExpressionEvaluator(CurrentNode.LeftNode)) then
                 return self:ExpressionEvaluator(CurrentNode.RightNode)
             else
-                Error:Error("SEMANTIC ERROR: ADDITION OF NON NUMBERS IS NOT POSSIBLE ON LINE " .. CurrentNode.Token.LineNumber)
+                Error:Error("SEMANTIC ERROR: ADDITION OF NON NUMBERS ON LINE " .. CurrentNode.Token.LineNumber)
             end
         end
     end
