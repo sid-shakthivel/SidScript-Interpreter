@@ -1,4 +1,0 @@
-void func foo (num bar) {
-    print bar;
-}
-foo (12);

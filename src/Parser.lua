@@ -74,6 +74,8 @@ function CParser:Statement()
         return self:Print()
     elseif (Type == self.Tokens.ADD) then
         return self:Expr()
+    elseif (Type == self.Tokens.RETURN) then
+        return self:Return()
     else
         Error:Error("PARSER ERROR: IDENTIFIER " .. self.CurrentToken.Value .. " NOT DEFINED ON LINE " .. self.CurrentToken.LineNumber)
     end
@@ -132,6 +134,10 @@ function CParser:FunctionCallParameters()
         end
     end
     return Parameters
+end
+
+function CParser:Return()
+    return CAST.CUnaryNode(self.CurrentToken, self:Expr())
 end
 
 function CParser:Assign()
@@ -220,32 +226,21 @@ end
 
 function CParser:Value()
     self:SetNextToken()
-    local Cases = {
-        [self.Tokens.STR] = function ()
+    if (self.CurrentToken.Type == self.Tokens.NUM or self.CurrentToken.Type == self.Tokens.STR or self.CurrentToken.Type == self.Tokens.BOOL) then
+        return CAST.CNode:new(self.CurrentToken)
+    elseif (self.CurrentToken.Type == self.Tokens.VAR) then
+        self:SetNextToken()
+        if (self.CurrentToken.Type == self.Tokens.LPAREN) then
+            self:SetNextToken(self.LastToken)
+            return self:FunctionCall()
+        else
+            self:SetNextToken(self.LastToken)
             return CAST.CNode:new(self.CurrentToken)
-        end,
-        [self.Tokens.NUM] = function()
-            return CAST.CNode:new(self.CurrentToken)
-        end,
-        [self.Tokens.BOOL] = function()
-            return CAST.CNode:new(self.CurrentToken)
-        end,
-        [self.Tokens.VAR] = function()
-            return CAST.CNode:new(self.CurrentToken)
-        end,
-        [self.Tokens.ADD or self.Tokens.MIN] = function()
-            local Operation = self.CurrentToken
-            local Value = self:Value()
-            return CAST.CUnaryNode:new(Operation, Value)
-        end,
-        [self.Tokens.LPAREN] = function()
-            return self:expr()
-        end,
-    }
-    if (Cases[self.CurrentToken.Type]) then
-        return Cases[self.CurrentToken.Type]()
-    else
-        Error:Error("PARSER ERROR: UNEXPECTED IDENTIFIER " .. self.CurrentToken.Value .. " ON LINE " .. self.CurrentToken.LineNumber)
+        end
+    elseif (self.CurrentToken.Type == self.Tokens.ADD or self.CurrentToken.Type == self.Tokens.MIN) then
+        return CAST.CUnaryNode:new(self.CurrentToken, self:Value())
+    elseif (self.CurrentToken.Type == self.Tokens.LPAREN) then
+        return self:Expr()
     end
 end
 

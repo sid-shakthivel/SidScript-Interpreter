@@ -33,6 +33,7 @@ CLexer.Tokens = {
     BOOL_TYPE = "bool",
     VOID_TYPE = "void",
     PRINT = "print",
+    RETURN = "return",
     IF = "if",
     ELSE = "else",
     WHILE = "while",

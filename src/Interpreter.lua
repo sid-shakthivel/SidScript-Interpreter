@@ -121,6 +121,8 @@ function CInterpreter:MainEvaluator(CurrentNode)
         print(self:ExpressionAssignmentEvaluator(CurrentNode.NextNode))
     elseif (CurrentNode.Token.Type == self.Tokens.FUNC or CurrentNode.Token.Type == self.Tokens.CALL) then
         return self:FunctionEvaluator(CurrentNode)
+    elseif (CurrentNode.Token.Type == self.Tokens.RETURN) then
+        return self:ExpressionAssignmentEvaluator(CurrentNode.NextNode)
     end
     return 0
 end
