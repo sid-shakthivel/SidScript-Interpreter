@@ -1,8 +1,5 @@
-test = 43
+test = {1, 2, 3}
+best = {4, 5, 6}
 
-for i = 1, 5 do
-    local test = 23
-    print(test)
-end
-
-print(test)
+NewTable = { table.unpack(test), table.unpack(best) }
+print(#NewTable)
