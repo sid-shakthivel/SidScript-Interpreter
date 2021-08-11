@@ -15,5 +15,5 @@ File:close()
 Interpreter = CInterpreter:new(Program)
 Interpreter:Execute()
 
---Lexer = CLexer:new(Program)
---Lexer:InvertTokens()
+Lexer = CLexer:new(Program)
+Lexer:InvertTokens()

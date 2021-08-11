@@ -51,7 +51,7 @@ function CLexer:new(Input)
     NewLexer.Input = Input
     NewLexer.CurrentPosition = 1
     NewLexer.InvertedTokens = {}
-    NewLexer.LineNumber = 1
+    NewLexer.LineNumber = 0
     self.__index = self
     return NewLexer
 end
@@ -77,6 +77,7 @@ function CLexer:GetNextToken()
         Token = CToken:new(self:GetNumber(), self.Tokens.NUM, self.LineNumber)
     elseif (Character == "=" and self:Peek() == "=") then
         Token = CToken:new("==", self.Tokens.EQUALS, self.LineNumber)
+        self.CurrentPosition = self.CurrentPosition + 1
     elseif (self.InvertedTokens[Character] ~= nil) then
         Token = CToken:new(Character, self.Tokens[self.InvertedTokens[Character]], self.LineNumber)
     elseif (Character == '`') then

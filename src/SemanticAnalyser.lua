@@ -109,7 +109,7 @@ function CSemanticAnalyser:Analyse(CurrentNode)
     elseif (CurrentNode.Token.Type == self.Tokens.WHILE) then
         self:BuildSymbolTable(("while " .. math.random(1000000)), CurrentNode.RightNode)
     elseif (CurrentNode.Token.Type == self.Tokens.FOR) then
-        self:Analyse(CSymbolTable.LeftNode)
+        self:Analyse(CurrentNode.LeftNode)
         self:BuildSymbolTable(("for " .. math.random(1000000)), CurrentNode.RightNode)
     end
 end
@@ -117,7 +117,7 @@ end
 function CSemanticAnalyser:BuildSymbolTable(Name, Body)
     local NewScope = CSymbolTable:new(Name, self.CurrentScope)
     self.CurrentScope = NewScope
-    for i = 0, #Body do
+    for i = 1, #Body do
         self:Analyse(Body[i])
     end
     self.CurrentScope = NewScope.EnclosingScope

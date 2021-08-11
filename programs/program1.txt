@@ -1,3 +1,4 @@
-for num i = 0; i < 10; +i {
-    print i;
+num i = 23;
+if i == 23 {
+    print `correct`;
 }

@@ -140,9 +140,9 @@ function CInterpreter:Execute()
         self.SemanticAnalyser:Analyse(Root[i])
     end
 
-    self.CallStack:Push(CSTackFrame:new("Main", nil))
-    self:Interpret(Root)
-    self.CallStack:Pop()
+    --self.CallStack:Push(CSTackFrame:new("Main", nil))
+    --self:Interpret(Root)
+    --self.CallStack:Pop()
 end
 
 return { CInterpreter }
