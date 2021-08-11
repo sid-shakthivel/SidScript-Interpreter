@@ -1,0 +1,6 @@
+num i = 0;
+# This is a while loop
+while i < 10 {
+    print i;
+    i = i + 1;
+}
