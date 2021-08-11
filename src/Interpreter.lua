@@ -100,7 +100,7 @@ function CInterpreter:FunctionEvaluator(CurrentNode)
         self.CallStack:Peek():SetItem(CurrentNode.CentreLeftNode.Token.Value, CurrentNode)
     elseif (CurrentNode.Token.Type == self.Tokens.CALL) then
         local Function = self.CallStack:Peek():GetItem(CurrentNode.LeftNode.Token.Value)
-        local NewStackFrame = CSTackFrame:new(CurrentNode.LeftNode.Token.Value, 2)
+        local NewStackFrame = CSTackFrame:new(CurrentNode.LeftNode.Token.Value, self.CallStack:Peek())
         self.CallStack:Push(NewStackFrame)
         for i = 1, #Function.LeftNode do
             self.CallStack:Peek():SetItem(self:ExpressionAssignmentEvaluator(Function.LeftNode[i]), self:ExpressionAssignmentEvaluator(CurrentNode.RightNode[i]))
@@ -140,7 +140,7 @@ function CInterpreter:Execute()
         self.SemanticAnalyser:BuildSymbolTables(Root[i])
     end
 
-    self.CallStack:Push(CSTackFrame:new("Main", 1))
+    self.CallStack:Push(CSTackFrame:new("Main", nil))
     self:Interpret(Root)
     self.CallStack:Pop()
 end

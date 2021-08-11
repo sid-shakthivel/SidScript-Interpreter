@@ -1,10 +1,10 @@
-CStackFrame = { Name, ScopeLevel, Members }
+CStackFrame = { Name, EncapsulatingScope, Members }
 
-function CStackFrame:new(Name, ScopeLevel)
+function CStackFrame:new(Name, EncapsulatingScope)
     NewStackFrame = {}
     setmetatable(NewStackFrame, self)
     NewStackFrame.Name = Name
-    NewStackFrame.ScopeLevel = ScopeLevel
+    NewStackFrame.EncapsulatingScope = EncapsulatingScope
     NewStackFrame.Members = {}
     self.__index = self
     return NewStackFrame
@@ -15,7 +15,13 @@ function CStackFrame:SetItem(Key, Value)
 end
 
 function CStackFrame:GetItem(Key)
-    return self.Members[Key]
+    if (self.Members[Key] ~= nil) then
+        return self.Members[Key]
+    elseif (self.Members[Key] == nil and self.EncapsulatingScope ~= nil) then
+        return self.EncapsulatingScope:GetItem(Key)
+    else
+        return nil
+    end
 end
 
 return { CStackFrame }
