@@ -43,6 +43,7 @@ CLexer.Tokens = {
     NUM = "NUM",
     STR = "STR",
     BOOL = "BOOL",
+    VOID = "VOID",
     VAR = "VAR",
 }
 

@@ -137,7 +137,7 @@ function CParser:FunctionCallParameters()
 end
 
 function CParser:Return()
-    return CAST.CUnaryNode(self.CurrentToken, self:Expr())
+    return CAST.CUnaryNode:new(self.CurrentToken, self:Expr())
 end
 
 function CParser:Assign()
@@ -147,8 +147,15 @@ function CParser:Assign()
     else
         local Type = self.CurrentToken
         self:CheckSetNextToken(self.Tokens.VAR)
-        self:CheckSetNextToken(self.Tokens.ASSIGN)
-        return CAST.CBinaryNode:new(self.CurrentToken, CAST.CUnaryNode:new(Type, CAST.CNode:new(self.LastToken)), self:Expr())
+        self:SetNextToken()
+        if (self.CurrentToken.Type == self.Tokens.ASSIGN) then
+            return CAST.CBinaryNode:new(self.CurrentToken, CAST.CUnaryNode:new(Type, CAST.CNode:new(self.LastToken)), self:Expr())
+        elseif (self.CurrentToken.Type == self.Tokens.SEMI) then
+            self:SetNextToken(self.LastToken)
+            return CAST.CBinaryNode:new({ Type = self.Tokens.ASSIGN }, CAST.CUnaryNode:new(Type, CAST.CNode:new(self.CurrentToken)), nil)
+        else
+            Error:Error("UNEXPECTED IDENTIFIER " .. self.CurrentToken.Value .. " ON LINE " .. self.CurrentToken.LineNumber)
+        end
     end
 end
 

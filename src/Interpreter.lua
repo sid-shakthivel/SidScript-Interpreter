@@ -20,7 +20,9 @@ function CInterpreter:new(LexerInput)
 end
 
 function CInterpreter:ExpressionAssignmentEvaluator(CurrentNode)
-    if (CurrentNode.Token.Type == self.Tokens.ASSIGN) then
+    if (CurrentNode == nil) then
+        return nil
+    elseif (CurrentNode.Token.Type == self.Tokens.ASSIGN) then
         local Variable = CurrentNode.LeftNode.Token.Value
         if (CurrentNode.LeftNode.NextNode) then
             Variable = self:ExpressionAssignmentEvaluator(CurrentNode.LeftNode)
@@ -29,7 +31,7 @@ function CInterpreter:ExpressionAssignmentEvaluator(CurrentNode)
         self.CallStack:Peek():SetItem(Variable, Value)
         return self.CallStack:Peek():GetItem(Variable)
     elseif (CurrentNode.Token.Type == self.Tokens.NUM_TYPE or CurrentNode.Token.Type == self.Tokens.STR_TYPE or CurrentNode.Token.Type == self.Tokens.BOOL_TYPE) then
-        return self:ExpressionAssignmentEvaluator(CurrentNode.NextNode)
+        return self:ExpressionAssignmentEvaluator(CurrentNode.NextNode, IsValue)
     elseif (CurrentNode.Token.Type == self.Tokens.NUM or CurrentNode.Token.Type == self.Tokens.STR or CurrentNode.Token.Type == self.Tokens.BOOL) then
         return CurrentNode.Token.Value
     elseif (CurrentNode.Token.Type == self.Tokens.VAR) then
@@ -71,6 +73,16 @@ function CInterpreter:ConditionalEvaluator(CurrentNode)
     end
 end
 
+function CInterpreter:GetVariableName(CurrentNode)
+    if (CurrentNode.Token.Value == self.Tokens.ASSIGN)then
+        return self:GetVariableName(CurrentNode.LeftNode)
+    elseif (CurrentNode.Token.Type == self.Tokens.NUM_TYPE or CurrentNode.Token.Type == self.Tokens.STR_TYPE or CurrentNode.Token.Type == self.Tokens.BOOL_TYPE) then
+        return self:GetVariableName(CurrentNode.NextNode)
+    elseif (CurrentNode.Token.Type == self.Tokens.VAR) then
+        return CurrentNode.Token.Value
+    end
+end
+
 function CInterpreter:IterativeEvaluator(CurrentNode)
     if (CurrentNode.Token.Type == self.Tokens.WHILE) then
         while true do
@@ -81,7 +93,7 @@ function CInterpreter:IterativeEvaluator(CurrentNode)
             end
         end
     elseif (CurrentNode.Token.Type == self.Tokens.FOR) then
-        local VariableName = self:ExpressionAssignmentEvaluator(CurrentNode.LeftNode.LeftNode)
+        local VariableName = self:GetVariableName(CurrentNode.LeftNode)
         self:ExpressionAssignmentEvaluator(CurrentNode.LeftNode)
         while true do
             if (self:ConditionalEvaluator(CurrentNode.CentreLeftNode) == true) then
@@ -138,12 +150,36 @@ end
 function CInterpreter:Execute()
     local Root = self.Parser:Program()
 
+    print(Root[1].Token.Value)
+
+    print()
+    print(Root[1].LeftNode[1].Token.Value)
+    print(Root[1].LeftNode[1].NextNode.Token.Value)
+
+    print()
+    print(Root[1].CentreLeftNode.Token.Value)
+
+    print()
+    print(Root[1].CentreRightNode.Token.Value)
+
+    print()
+    print(Root[1].RightNode[1].Token.Value)
+    print(Root[1].RightNode[1].LeftNode.Token.Value)
+    print(Root[1].RightNode[1].LeftNode.NextNode.Token.Value)
+    print(Root[1].RightNode[1].RightNode.Token.Value)
+
+    print()
+    print(Root[1].RightNode[2].Token.Value)
+    print(Root[1].RightNode[2].NextNode.Token.Value)
+    print(Root[1].RightNode[2].NextNode.RightNode.Token.Value)
+    print(Root[1].RightNode[2].NextNode.LeftNode.Token.Value)
+
     for i = 1, #Root do
-        self.SemanticAnalyser:Analyse(Root[i])
+        --self.SemanticAnalyser:Analyse(Root[i])
     end
 
     self.CallStack:Push(CSTackFrame:new("Main", nil))
-    self:Interpret(Root)
+    --self:Interpret(Root)
     self.CallStack:Pop()
 end
 

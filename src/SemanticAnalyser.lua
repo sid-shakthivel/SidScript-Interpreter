@@ -63,13 +63,13 @@ end
 
 function CSemanticAnalyser:Analyse(CurrentNode)
     if (CurrentNode.Token.Type == self.Tokens.FUNC) then
-        local NewSymbol = CFunctionSymbol:new(CurrentNode.CentreLeftNode.Token.Value, CurrentNode.Token.Type, CurrentNode.LeftNode)
+        local NewSymbol = CFunctionSymbol:new(CurrentNode.CentreLeftNode.Token.Value, self:GetFormattedVariableType(CurrentNode.CentreRightNode.Token), CurrentNode.LeftNode)
         self.CurrentScope:SetSymbol(NewSymbol)
         self:BuildSymbolTable(CurrentNode.CentreLeftNode.Token.Value, ConcatenateTable(CurrentNode.LeftNode, CurrentNode.RightNode))
     elseif (CurrentNode.Token.Type == self.Tokens.ASSIGN) then
         local LeftSide = self:Analyse(CurrentNode.LeftNode)
         local RightSide = self:GetType(CurrentNode.RightNode)
-        if (LeftSide.Type ~= RightSide.Type) then
+        if (RightSide ~= nil and LeftSide.Type ~= RightSide.Type) then
             Error:Error("SEMANTIC ERROR: VARIABLE OF TYPE " .. LeftSide.Type .. " CAN'T BE ASSIGNED TO " .. RightSide.Type .. " ON LINE " .. CurrentNode.Token.LineNumber)
         end
     elseif (CurrentNode.Token.Type == self.Tokens.NUM_TYPE or CurrentNode.Token.Type == self.Tokens.STR_TYPE or CurrentNode.Token.Type == self.Tokens.BOOL_TYPE) then
@@ -132,13 +132,17 @@ function CSemanticAnalyser:GetFormattedVariableType(Token)
         return self.Tokens.STR
     elseif (Token.Type == self.Tokens.BOOL_TYPE) then
         return self.Tokens.BOOL
+    elseif (Token.Type == self.Tokens.VOID_TYPE) then
+        return self.Tokens.VOID
     else
         Error:Error("SEMANTIC ERROR: UNEXPECTED IDENTIFIER " .. Token.Value)
     end
 end
 
 function CSemanticAnalyser:GetType(CurrentNode)
-    if (CurrentNode.Token.Type == self.Tokens.NUM_TYPE or CurrentNode.Token.Type == self.Tokens.STR_TYPE or CurrentNode.Token.Type == self.Tokens.BOOL_TYPE) then
+    if (CurrentNode == nil) then
+        return nil
+    elseif (CurrentNode.Token.Type == self.Tokens.NUM_TYPE or CurrentNode.Token.Type == self.Tokens.STR_TYPE or CurrentNode.Token.Type == self.Tokens.BOOL_TYPE) then
         return self:GetType(CurrentNode.NextNode)
     elseif (CurrentNode.Token.Type == self.Tokens.VAR) then
         return self.CurrentScope:GetSymbol(CurrentNode.Token.Value)
@@ -176,6 +180,8 @@ function CSemanticAnalyser:GetType(CurrentNode)
                 Error:Error("SEMANTIC ERROR: ADDITION OF NON NUMBERS ON LINE " .. CurrentNode.Token.LineNumber)
             end
         end
+    elseif (CurrentNode.Token.Type == self.Tokens.CALL) then
+        return self.CurrentScope:GetSymbol(CurrentNode.LeftNode.Token.Value).Type
     end
 end
 
