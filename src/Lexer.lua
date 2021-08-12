@@ -92,7 +92,8 @@ function CLexer:GetNextToken()
         local NextRightParenthesis = self.Input:find("%)", self.CurrentPosition) or #self.Input
         local NextSpace = self.Input:find(" ", self.CurrentPosition) or #self.Input
         local NextSemi = self.Input:find(";", self.CurrentPosition) or #self.Input
-        local Answer = math.min(NextLeftParenthesis, NextSpace, NextSemi, NextRightParenthesis)
+        local NextSign = self.Input:find("[*/+-]", self.CurrentPosition) or #self.Input
+        local Answer = math.min(NextLeftParenthesis, NextSpace, NextSemi, NextRightParenthesis, NextSign)
         local Result = self.Input:sub(self.CurrentPosition, (Answer-1))
 
         if (self.InvertedTokens[Result]) then

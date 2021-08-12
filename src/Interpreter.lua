@@ -153,26 +153,9 @@ end
 function CInterpreter:Execute()
     local Root = self.Parser:Program()
 
-    --print(Root[1].CentreLeftNode.Token.Value)
-    --
-    --print()
-    --print(Root[1].CentreRightNode.Token.Value)
-    --
-    --print()
-    --print(Root[1].RightNode[1].Token.Value)
-    --print(Root[1].RightNode[1].LeftNode[1].Token.Value)
-    --print(Root[1].RightNode[1].LeftNode[1].NextNode.Token.Value)
-    --
-    --print()
-    --print(Root[1].RightNode[1].RightNode[1].Token.Value)
-    --print(Root[1].RightNode[1].RightNode[1].NextNode.Token.Value)
-    --print(Root[1].RightNode[1].RightNode[1].NextNode.LeftNode.Token.Value)
-    --
-    --print(Root[1].RightNode[1].RightNode[1].NextNode.RightNode[1].Token.Value)
-
-    --for i = 1, #Root do
-    --    --self.SemanticAnalyser:Analyse(Root[i])
-    --end
+    for i = 1, #Root do
+        self.SemanticAnalyser:Analyse(Root[i])
+    end
 
     self.CallStack:Push(CSTackFrame:new("Main", nil))
     self:Interpret(Root)

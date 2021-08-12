@@ -63,6 +63,9 @@ end
 
 function CSemanticAnalyser:Analyse(CurrentNode)
     if (CurrentNode.Token.Type == self.Tokens.FUNC) then
+        if (self.CurrentScope:GetSymbol(CurrentNode.CentreLeftNode.Token.Value) ~= nil) then
+            Error:Error("SEMANTIC ERROR: FUNCTION OF NAME " .. CurrentNode.CentreLeftNode.Token.Value .. " ALREADY DECLARED")
+        end
         local NewSymbol = CFunctionSymbol:new(CurrentNode.CentreLeftNode.Token.Value, self:GetFormattedVariableType(CurrentNode.CentreRightNode.Token), CurrentNode.LeftNode)
         self.CurrentScope:SetSymbol(NewSymbol)
         self:BuildSymbolTable(CurrentNode.CentreLeftNode.Token.Value, ConcatenateTable(CurrentNode.LeftNode, CurrentNode.RightNode))
@@ -181,7 +184,7 @@ function CSemanticAnalyser:GetType(CurrentNode)
             end
         end
     elseif (CurrentNode.Token.Type == self.Tokens.CALL) then
-        return self.CurrentScope:GetSymbol(CurrentNode.LeftNode.Token.Value).Type
+        return self.CurrentScope:GetSymbol(CurrentNode.LeftNode.Token.Value)
     end
 end
 

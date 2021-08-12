@@ -1,9 +1,7 @@
-num func factorial (num number) {
-    if number == 1 {
-        return 1;
-    } else {
-        return number * factorial(number - 1);
-    }
+num func foo (num bar) {
+    num test = 23;
+    return test + bar;
 }
 
-print factorial(5);
+num i = foo(12);
+print i;
