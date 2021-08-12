@@ -83,10 +83,10 @@ function CLexer:GetNextToken()
     elseif (self.InvertedTokens[Character] ~= nil) then
         Token = CToken:new(Character, self.Tokens[self.InvertedTokens[Character]], self.LineNumber)
     elseif (Character == '`') then
-        local NextTemplateLiteral = self.Input:find("`", (self.CurrentPosition+1))
+        local NextTemplateLiteral = self.Input:find("`", (self.CurrentPosition+1)) - 1;
         local Result = self.Input:sub(self.CurrentPosition+1, NextTemplateLiteral)
         Token = CToken:new(Result, self.Tokens.STR, self.LineNumber)
-        self.CurrentPosition = NextTemplateLiteral
+        self.CurrentPosition = NextTemplateLiteral + 1
     else
         local NextLeftParenthesis = self.Input:find("%(", self.CurrentPosition) or #self.Input
         local NextRightParenthesis = self.Input:find("%)", self.CurrentPosition) or #self.Input

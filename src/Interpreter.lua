@@ -41,17 +41,19 @@ function CInterpreter:ExpressionAssignmentEvaluator(CurrentNode)
             return self.CallStack:Peek():GetItem(CurrentNode.Token.Value)
         end
     elseif (CurrentNode.Token.Type == self.Tokens.MUL) then
-        return self:ExpressionAssignmentEvaluator(CurrentNode.RightNode) * self:ExpressionAssignmentEvaluator(CurrentNode.LeftNode)
+        return self:ExpressionAssignmentEvaluator(CurrentNode.LeftNode) * self:ExpressionAssignmentEvaluator(CurrentNode.RightNode)
     elseif (CurrentNode.Token.Type == self.Tokens.MIN) then
-        return self:ExpressionAssignmentEvaluator(CurrentNode.RightNode) - self:ExpressionAssignmentEvaluator(CurrentNode.LeftNode)
+         return self:ExpressionAssignmentEvaluator(CurrentNode.LeftNode) - self:ExpressionAssignmentEvaluator(CurrentNode.RightNode)
     elseif (CurrentNode.Token.Type == self.Tokens.DIV) then
-        return self:ExpressionAssignmentEvaluator(CurrentNode.RightNode) / self:ExpressionAssignmentEvaluator(CurrentNode.LeftNode)
+        return self:ExpressionAssignmentEvaluator(CurrentNode.LeftNode) / self:ExpressionAssignmentEvaluator(CurrentNode.RightNode)
     elseif (CurrentNode.Token.Type == self.Tokens.ADD) then
         if (CurrentNode.NextNode) then
             return self:ExpressionAssignmentEvaluator(CurrentNode.NextNode) + 1
         else
-            return self:ExpressionAssignmentEvaluator(CurrentNode.RightNode) + self:ExpressionAssignmentEvaluator(CurrentNode.LeftNode)
+            return self:ExpressionAssignmentEvaluator(CurrentNode.LeftNode) + self:ExpressionAssignmentEvaluator(CurrentNode.RightNode)
         end
+    elseif (CurrentNode.Token.Type == self.Tokens.CALL) then
+        return self:FunctionEvaluator(CurrentNode)
     end
 end
 
@@ -115,10 +117,11 @@ function CInterpreter:FunctionEvaluator(CurrentNode)
         local NewStackFrame = CSTackFrame:new(CurrentNode.LeftNode.Token.Value, self.CallStack:Peek())
         self.CallStack:Push(NewStackFrame)
         for i = 1, #Function.LeftNode do
-            self.CallStack:Peek():SetItem(self:ExpressionAssignmentEvaluator(Function.LeftNode[i]), self:ExpressionAssignmentEvaluator(CurrentNode.RightNode[i]))
+            self.CallStack:Peek():SetItem(self:GetVariableName(Function.LeftNode[i]), self:ExpressionAssignmentEvaluator(CurrentNode.RightNode[i]))
         end
-        self:Interpret(Function.RightNode)
+        local ReturnValue = self:Interpret(Function.RightNode)
         self.CallStack:Pop()
+        return ReturnValue
     end
 end
 
@@ -150,36 +153,29 @@ end
 function CInterpreter:Execute()
     local Root = self.Parser:Program()
 
-    print(Root[1].Token.Value)
+    --print(Root[1].CentreLeftNode.Token.Value)
+    --
+    --print()
+    --print(Root[1].CentreRightNode.Token.Value)
+    --
+    --print()
+    --print(Root[1].RightNode[1].Token.Value)
+    --print(Root[1].RightNode[1].LeftNode[1].Token.Value)
+    --print(Root[1].RightNode[1].LeftNode[1].NextNode.Token.Value)
+    --
+    --print()
+    --print(Root[1].RightNode[1].RightNode[1].Token.Value)
+    --print(Root[1].RightNode[1].RightNode[1].NextNode.Token.Value)
+    --print(Root[1].RightNode[1].RightNode[1].NextNode.LeftNode.Token.Value)
+    --
+    --print(Root[1].RightNode[1].RightNode[1].NextNode.RightNode[1].Token.Value)
 
-    print()
-    print(Root[1].LeftNode[1].Token.Value)
-    print(Root[1].LeftNode[1].NextNode.Token.Value)
-
-    print()
-    print(Root[1].CentreLeftNode.Token.Value)
-
-    print()
-    print(Root[1].CentreRightNode.Token.Value)
-
-    print()
-    print(Root[1].RightNode[1].Token.Value)
-    print(Root[1].RightNode[1].LeftNode.Token.Value)
-    print(Root[1].RightNode[1].LeftNode.NextNode.Token.Value)
-    print(Root[1].RightNode[1].RightNode.Token.Value)
-
-    print()
-    print(Root[1].RightNode[2].Token.Value)
-    print(Root[1].RightNode[2].NextNode.Token.Value)
-    print(Root[1].RightNode[2].NextNode.RightNode.Token.Value)
-    print(Root[1].RightNode[2].NextNode.LeftNode.Token.Value)
-
-    for i = 1, #Root do
-        --self.SemanticAnalyser:Analyse(Root[i])
-    end
+    --for i = 1, #Root do
+    --    --self.SemanticAnalyser:Analyse(Root[i])
+    --end
 
     self.CallStack:Push(CSTackFrame:new("Main", nil))
-    --self:Interpret(Root)
+    self:Interpret(Root)
     self.CallStack:Pop()
 end
 

@@ -130,7 +130,8 @@ function CParser:FunctionCallParameters()
         elseif (self.CurrentToken.Type == self.Tokens.COMMA) then
             self:SetNextToken()
         else
-            table.insert(Parameters, CAST.CNode:new(self.CurrentToken))
+            self:SetNextToken(self.LastToken)
+            table.insert(Parameters, self:Expr())
         end
     end
     return Parameters
@@ -207,7 +208,7 @@ function CParser:Expr()
     local Node = self:Term()
     while true do
         self:SetNextToken()
-        if (self.CurrentToken.Type == self.Tokens.ADD or self.CurrentToken.Type == self.Tokens.ADD) then
+        if (self.CurrentToken.Type == self.Tokens.ADD or self.CurrentToken.Type == self.Tokens.MIN) then
             Node =  CAST.CBinaryNode:new(self.CurrentToken, Node, self:Term())
         else
             self:SetNextToken(self.LastToken)
