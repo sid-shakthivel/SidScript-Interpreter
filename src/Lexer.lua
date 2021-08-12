@@ -43,13 +43,14 @@ CLexer.Tokens = {
     WHILE = "while",
     FOR = "for",
     FUNC = "func",
+    PUSH = "push",
+    REMOVE = "remove",
     CALL = "CALL",
     NUM = "NUM",
     STR = "STR",
     BOOL = "BOOL",
     VOID = "VOID",
     LIST = "LIST",
-    LISTMEMBER = "LISTMEMBER",
     VAR = "VAR",
 }
 

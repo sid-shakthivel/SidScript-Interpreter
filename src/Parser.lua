@@ -256,6 +256,16 @@ function CParser:Value()
         elseif (self.CurrentToken.Type == self.Tokens.LBRACKET) then
             self:SetNextToken(self.LastToken)
             return self:ListMember()
+        elseif (self.CurrentToken.Type == self.Tokens.DOT) then
+            local CurrentToken = self.LastToken
+            self:SetNextToken()
+            if (self.CurrentToken.Type == self.Tokens.PUSH) then
+                self:SetNextToken(CurrentToken)
+                return self:ListPush()
+            elseif (self.CurrentToken.Type == self.Tokens.REMOVE) then
+                self:SetNextToken(CurrentToken)
+                return self:ListRemove()
+            end
         else
             self:SetNextToken(self.LastToken)
             return CAST.CNode:new(self.CurrentToken)
@@ -268,6 +278,28 @@ function CParser:Value()
         self:SetNextToken(self.LastToken)
         return CAST.CUnaryNode:new({ Type = self.Tokens.LIST, Value = "LIST" }, self:ListParameters())
     end
+end
+
+function CParser:ListPush()
+    local ListName = self.CurrentToken.Value
+    self:CheckSetNextToken(self.Tokens.DOT)
+    self:CheckSetNextToken(self.Tokens.PUSH)
+    local ListPush = self.CurrentToken
+    self:CheckSetNextToken(self.Tokens.LPAREN)
+    local NewListMember = self:Value()
+    self:CheckSetNextToken(self.Tokens.RPAREN)
+    return CAST.CBinaryNode:new(ListPush, CAST.CUnaryNode:new(ListName), CAST.CUnaryNode:new(NewListMember))
+end
+
+function CParser:ListRemove()
+    local ListName = self.CurrentToken.Value
+    self:CheckSetNextToken(self.Tokens.DOT)
+    self:CheckSetNextToken(self.Tokens.REMOVE)
+    local ListRemove = self.CurrentToken
+    self:CheckSetNextToken(self.Tokens.LPAREN)
+    local NewListMember = self:Value()
+    self:CheckSetNextToken(self.Tokens.RPAREN)
+    return CAST.CBinaryNode:new(ListRemove, CAST.CUnaryNode:new(ListName), CAST.CUnaryNode:new(NewListMember))
 end
 
 function CParser:ListMember()

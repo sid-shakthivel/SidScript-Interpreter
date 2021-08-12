@@ -32,6 +32,13 @@ function CInterpreter:ListEvaluator(CurrentNode)
             self.CallStack:Peek():SetItem(ListName, Value)
             return self.CallStack:Peek():GetItem(ListName)
         end
+    elseif (CurrentNode.Token.Type == self.Tokens.PUSH) then
+        local ListName = CurrentNode.LeftNode.Token.Value
+        table.insert(self.CallStack:Peek():GetItem(ListName), CurrentNode.RightNode)
+        return self:ExpressionAssignmentEvaluator(CurrentNode.RightNode)
+    elseif (CurrentNode.Token.Type == self.Tokens.REMOVE) then
+        local ListName = CurrentNode.LeftNode.Token.Value
+        table.remove(self.CallStack:Peek():GetItem(ListName), CurrentNode.RightNode)
     end
 end
 
@@ -55,7 +62,7 @@ function CInterpreter:ExpressionAssignmentEvaluator(CurrentNode)
         return CurrentNode.Token.Value
     elseif (CurrentNode.Token.Type == self.Tokens.LIST) then
         if (CurrentNode.NextNode.Token) then
-            return self.CallStack:Peek():GetItem(CurrentNode.Token.Value)[CurrentNode.NextNode.Token.Value].Token.Value
+            return self:ExpressionAssignmentEvaluator(self.CallStack:Peek():GetItem(CurrentNode.Token.Value)[CurrentNode.NextNode.Token.Value])
         else
             return CurrentNode.NextNode
         end
@@ -163,6 +170,8 @@ function CInterpreter:MainEvaluator(CurrentNode)
         return self:FunctionEvaluator(CurrentNode)
     elseif (CurrentNode.Token.Type == self.Tokens.RETURN) then
         return self:ExpressionAssignmentEvaluator(CurrentNode.NextNode)
+    elseif (CurrentNode.Token.Type == self.Tokens.PUSH or CurrentNode.Token.Type == self.Token.REMOVE) then
+        return self:ListEvaluator(CurrentNode)
     end
     return 0
 end
