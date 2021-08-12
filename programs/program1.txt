@@ -1,5 +1,2 @@
 list a = [1, 2, 3];
-push(a, 23);
-print a[4];
-remove(a, 4);
-print a[4];
+print #a;

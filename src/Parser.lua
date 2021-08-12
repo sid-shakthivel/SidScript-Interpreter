@@ -271,6 +271,8 @@ function CParser:Value()
     elseif (self.CurrentToken.Type == self.Tokens.LBRACKET) then
         self:SetNextToken(self.LastToken)
         return CAST.CUnaryNode:new({ Type = self.Tokens.LIST, Value = "LIST" }, self:ListParameters())
+    elseif (self.CurrentToken.Type == self.Tokens.HASH) then
+        return self:ListLength()
     end
 end
 
@@ -305,6 +307,11 @@ function CParser:ListMember()
     local Index = self.CurrentToken
     self:CheckSetNextToken(self.Tokens.RBRACKET)
     return CAST.CUnaryNode:new(ListName, CAST.CNode:new(Index))
+end
+
+function CParser:ListLength()
+    self:SetNextToken()
+    return CAST.CUnaryNode:new(self.LastToken, CAST.CNode:new(self.CurrentToken))
 end
 
 function CParser:ListParameters()

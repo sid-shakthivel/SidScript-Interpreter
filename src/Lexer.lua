@@ -26,6 +26,7 @@ CLexer.Tokens = {
     SEMI = ";",
     COMMA = ",",
     DOT = ".",
+    HASH = "#",
     GREATER = "<",
     LESSER = ">",
     EQUALS = "==",

@@ -39,6 +39,9 @@ function CInterpreter:ListEvaluator(CurrentNode)
     elseif (CurrentNode.Token.Type == self.Tokens.REMOVE) then
         local ListName = CurrentNode.LeftNode.Token.Value
         table.remove(self.CallStack:Peek():GetItem(ListName), self:ExpressionAssignmentEvaluator(CurrentNode.RightNode))
+    elseif (CurrentNode.Token.Type == self.Tokens.HASH) then
+        local ListName = CurrentNode.NextNode.Token.Value
+        return #(self.CallStack:Peek():GetItem(ListName))
     end
 end
 
@@ -86,6 +89,8 @@ function CInterpreter:ExpressionAssignmentEvaluator(CurrentNode)
         end
     elseif (CurrentNode.Token.Type == self.Tokens.CALL) then
         return self:FunctionEvaluator(CurrentNode)
+    elseif (CurrentNode.Token.Type == self.Tokens.HASH) then
+        return self:ListEvaluator(CurrentNode)
     end
 end
 
