@@ -20,9 +20,12 @@ CLexer.Tokens = {
     EOF = " ",
     LPAREN = "(",
     RPAREN = ")",
+    LBRACKET = "[",
+    RBRACKET = "]",
     ASSIGN = "=",
     SEMI = ";",
     COMMA = ",",
+    DOT = ".",
     GREATER = "<",
     LESSER = ">",
     EQUALS = "==",
@@ -32,6 +35,7 @@ CLexer.Tokens = {
     STR_TYPE = "str",
     BOOL_TYPE = "bool",
     VOID_TYPE = "void",
+    LIST_TYPE = "list",
     PRINT = "print",
     RETURN = "return",
     IF = "if",
@@ -44,6 +48,7 @@ CLexer.Tokens = {
     STR = "STR",
     BOOL = "BOOL",
     VOID = "VOID",
+    LIST = "LIST",
     VAR = "VAR",
 }
 

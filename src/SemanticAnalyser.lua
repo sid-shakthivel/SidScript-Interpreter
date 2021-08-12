@@ -75,19 +75,19 @@ function CSemanticAnalyser:Analyse(CurrentNode)
         if (RightSide ~= nil and LeftSide.Type ~= RightSide.Type) then
             Error:Error("SEMANTIC ERROR: VARIABLE OF TYPE " .. LeftSide.Type .. " CAN'T BE ASSIGNED TO " .. RightSide.Type .. " ON LINE " .. CurrentNode.Token.LineNumber)
         end
-    elseif (CurrentNode.Token.Type == self.Tokens.NUM_TYPE or CurrentNode.Token.Type == self.Tokens.STR_TYPE or CurrentNode.Token.Type == self.Tokens.BOOL_TYPE) then
-        if (self.CurrentScope:GetSymbol(CurrentNode.NextNode.Token.Value) ~= nil) then
-            Error:Error("SEMANTIC ERROR: VARIABLE " .. CurrentNode.NextNode.Token.Value .. " ALREADY DECLARED")
-        end
-        local NewSymbol = CSymbol:new(CurrentNode.NextNode.Token.Value, self:GetFormattedVariableType(CurrentNode.Token))
-        self.CurrentScope:SetSymbol(NewSymbol)
-        return self.CurrentScope:GetSymbol(CurrentNode.NextNode.Token.Value)
     elseif (CurrentNode.Token.Type == self.Tokens.VAR) then
         if (self.CurrentScope:GetSymbol(CurrentNode.Token.Value) == nil) then
             Error:Error("SEMANTIC ERROR: VARIABLE " .. CurrentNode.Token.Value .. " NOT DECLARED ON LINE " .. CurrentNode.Token.LineNumber)
         else
             return self.CurrentScope:GetSymbol(CurrentNode.Token.Value)
         end
+    elseif (CurrentNode.Token.Type == self.Tokens.NUM_TYPE or CurrentNode.Token.Type == self.Tokens.STR_TYPE or CurrentNode.Token.Type == self.Tokens.BOOL_TYPE or CurrentNode.Token.Type == self.Tokens.LIST_TYPE) then
+        if (self.CurrentScope:GetSymbol(CurrentNode.NextNode.Token.Value) ~= nil) then
+            Error:Error("SEMANTIC ERROR: VARIABLE " .. CurrentNode.NextNode.Token.Value .. " ALREADY DECLARED")
+        end
+        local NewSymbol = CSymbol:new(CurrentNode.NextNode.Token.Value, self:GetFormattedVariableType(CurrentNode.Token))
+        self.CurrentScope:SetSymbol(NewSymbol)
+        return self.CurrentScope:GetSymbol(CurrentNode.NextNode.Token.Value)
     elseif (CurrentNode.Token.Type == self.Tokens.CALL) then
         local Function = self.CurrentScope:GetSymbol(CurrentNode.LeftNode.Token.Value)
         if (#Function.Parameters ~= #CurrentNode.RightNode) then
@@ -137,6 +137,8 @@ function CSemanticAnalyser:GetFormattedVariableType(Token)
         return self.Tokens.BOOL
     elseif (Token.Type == self.Tokens.VOID_TYPE) then
         return self.Tokens.VOID
+    elseif (Token.Type == self.Tokens.LIST_TYPE) then
+        return self.Tokens.LIST
     else
         Error:Error("SEMANTIC ERROR: UNEXPECTED IDENTIFIER " .. Token.Value)
     end
@@ -149,7 +151,7 @@ function CSemanticAnalyser:GetType(CurrentNode)
         return self:GetType(CurrentNode.NextNode)
     elseif (CurrentNode.Token.Type == self.Tokens.VAR) then
         return self.CurrentScope:GetSymbol(CurrentNode.Token.Value)
-    elseif (CurrentNode.Token.Type == self.Tokens.NUM or CurrentNode.Token.Type == self.Tokens.STR or CurrentNode.Token.Type == self.Tokens.BOOL) then
+    elseif (CurrentNode.Token.Type == self.Tokens.NUM or CurrentNode.Token.Type == self.Tokens.STR or CurrentNode.Token.Type == self.Tokens.BOOL or CurrentNode.Token.Type == self.Tokens.LIST) then
         return CurrentNode.Token
     elseif (CurrentNode.Token.Type == self.Tokens.MUL) then
         if (self:GetType(CurrentNode.RightNode).Type == self.Tokens.NUM and self:GetType(CurrentNode.LeftNode)) then

@@ -30,10 +30,12 @@ function CInterpreter:ExpressionAssignmentEvaluator(CurrentNode)
         local Value = self:ExpressionAssignmentEvaluator(CurrentNode.RightNode)
         self.CallStack:Peek():SetItem(Variable, Value)
         return self.CallStack:Peek():GetItem(Variable)
-    elseif (CurrentNode.Token.Type == self.Tokens.NUM_TYPE or CurrentNode.Token.Type == self.Tokens.STR_TYPE or CurrentNode.Token.Type == self.Tokens.BOOL_TYPE) then
-        return self:ExpressionAssignmentEvaluator(CurrentNode.NextNode, IsValue)
+    elseif (CurrentNode.Token.Type == self.Tokens.NUM_TYPE or CurrentNode.Token.Type == self.Tokens.STR_TYPE or CurrentNode.Token.Type == self.Tokens.BOOL_TYPE or CurrentNode.Token.Type == self.Tokens.LIST_TYPE) then
+        return self:ExpressionAssignmentEvaluator(CurrentNode.NextNode)
     elseif (CurrentNode.Token.Type == self.Tokens.NUM or CurrentNode.Token.Type == self.Tokens.STR or CurrentNode.Token.Type == self.Tokens.BOOL) then
         return CurrentNode.Token.Value
+    elseif (CurrentNode.Token.Type == self.Tokens.LIST) then
+        return CurrentNode.NextNode
     elseif (CurrentNode.Token.Type == self.Tokens.VAR) then
         if (self.CallStack:Peek():GetItem(CurrentNode.Token.Value) == nil) then
             return CurrentNode.Token.Value
@@ -152,6 +154,12 @@ end
 
 function CInterpreter:Execute()
     local Root = self.Parser:Program()
+
+    --print(Root[1].LeftNode.Token.Value)
+    --print(Root[1].LeftNode.NextNode.Token.Value)
+    --
+    --print(Root[1].RightNode.Token.Type)
+    --print(Root[1].RightNode.NextNode[1].Token.Value)
 
     for i = 1, #Root do
         self.SemanticAnalyser:Analyse(Root[i])
