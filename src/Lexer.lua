@@ -46,6 +46,8 @@ CLexer.Tokens = {
     FUNC = "func",
     PUSH = "push",
     REMOVE = "remove",
+    TRUE = "bool",
+    FALSE = "bool",
     CALL = "CALL",
     NUM = "NUM",
     STR = "STR",
@@ -68,6 +70,7 @@ end
 
 function CLexer:GetNextToken()
     self.LastPosition = self.CurrentPosition
+
     if (self.CurrentPosition > #self.Input) then
         return CToken:new("EOF", self.Tokens.EOF, self.LineNumber)
     end
@@ -96,23 +99,11 @@ function CLexer:GetNextToken()
         Token = CToken:new(Result, self.Tokens.STR, self.LineNumber)
         self.CurrentPosition = NextTemplateLiteral + 1
     else
-        local NextLeftParenthesis = self.Input:find("%(", self.CurrentPosition) or #self.Input
-        local NextRightParenthesis = self.Input:find("%)", self.CurrentPosition) or #self.Input
-        local NextSpace = self.Input:find(" ", self.CurrentPosition) or #self.Input
-        local NextSemi = self.Input:find(";", self.CurrentPosition) or #self.Input
-        local NextComma = self.Input:find(",", self.CurrentPosition) or #self.Input
-        local NextSign = self.Input:find("[*/+-]", self.CurrentPosition) or #self.Input
-        local NextLeftBracket = self.Input:find("%[", self.CurrentPosition) or #self.Input
-        local NextRightBracket = self.Input:find("%]", self.CurrentPosition) or #self.Input
-        local Answer = math.min(NextLeftParenthesis, NextSpace, NextSemi, NextRightParenthesis, NextSign, NextLeftBracket, NextRightBracket, NextComma)
+        local Answer = math.min((self.Input:find(" ", self.CurrentPosition) or #self.Input), (self.Input:find("%;%,%[%]%(%)%[*/+-]", self.CurrentPosition) or #self.Input))
         local Result = self.Input:sub(self.CurrentPosition, (Answer-1))
 
         if (self.InvertedTokens[Result]) then
             Token = CToken:new(Result, self.Tokens[self.InvertedTokens[Result]], self.LineNumber)
-        elseif (Result == "true") then
-            Token = CToken:new(Result, self.Tokens.BOOL, self.LineNumber)
-        elseif (Result == "false") then
-            Token = CToken:new(Result, self.Tokens.BOOL, self.LineNumber)
         else
             Token = CToken:new(Result, self.Tokens.VAR, self.LineNumber)
         end
