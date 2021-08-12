@@ -91,31 +91,9 @@ function CParser:FunctionDeclaration()
     local Func = self.CurrentToken
     self:CheckSetNextToken(self.Tokens.VAR)
     local FuncName = self.CurrentToken
-    local Parameters = self:FunctionParameters()
+    local Parameters = self:Parameters(true)
     self:CheckSetNextToken(self.Tokens.LBRACE)
     return CAST.CQuaternaryNode:new(Func, Parameters, CAST.CNode:new(FuncName), CAST.CNode:new(FuncType),self:Statements(true))
-end
-
-function CParser:FunctionParameters()
-    local Parameters = {}
-    self:SetNextToken()
-    while true do
-        self:SetNextToken()
-        if (self.CurrentToken.Type == self.Tokens.RPAREN) then
-            break
-        elseif (self.CurrentToken.Type == self.Tokens.NUM_TYPE or self.CurrentToken.Type == self.Tokens.STR_TYPE or self.CurrentToken.Type == self.Tokens.BOOL_TYPE) then
-            local VarType = self.CurrentToken
-            self:SetNextToken()
-            table.insert(Parameters, CAST.CUnaryNode:new(VarType, CAST.CNode:new(self.CurrentToken)))
-        elseif (self.CurrentToken.Type == self.Tokens.COMMA) then
-            self:SetNextToken()
-        elseif (self.CurrentToken.Type == self.Tokens.VAR) then
-            table.insert(Parameters, CAST.CNode:new(self.CurrentToken))
-        else
-            Error:Error("PARSER ERROR: UNEXPECTED IDENTIFIER " .. self.CurrentToken.Value .. " ON LINE " .. self.CurrentToken.LineNumber)
-        end
-    end
-    return Parameters
 end
 
 function CParser:FunctionCall()
@@ -124,32 +102,12 @@ function CParser:FunctionCall()
     return CAST.CBinaryNode:new({ Value = "CALL", Type = self.Tokens.CALL }, CAST.CNode:new(FuncName), Parameters)
 end
 
-function CParser:Parameters(IsRightParen)
-    local Parameters = {}
-    self:SetNextToken()
-    while true do
-        self:SetNextToken()
-        if (self.CurrentToken.Type == self.Tokens.RPAREN and IsRightParen == true) then
-            break
-        elseif (self.CurrentToken.Type == self.Tokens.RBRACKET and IsRightParen == false) then
-            break
-        elseif (self.CurrentToken.Type == self.Tokens.COMMA) then
-            self:SetNextToken()
-        else
-            self:SetNextToken(self.LastToken)
-            table.insert(Parameters, self:Expr())
-        end
-    end
-    return Parameters
-end
-
 function CParser:Return()
     return CAST.CUnaryNode:new(self.CurrentToken, self:Expr())
 end
 
 function CParser:Assign()
     if (self.CurrentToken.Type == self.Tokens.VAR) then
-        --self:CheckSetNextToken(self.Tokens.ASSIGN)
         self:SetNextToken()
         if (self.CurrentToken.Type == self.Tokens.ASSIGN) then
             return CAST.CBinaryNode:new(self.CurrentToken, CAST.CNode:new(self.LastToken), self:Expr())
@@ -270,7 +228,7 @@ function CParser:Value()
         return self:Expr()
     elseif (self.CurrentToken.Type == self.Tokens.LBRACKET) then
         self:SetNextToken(self.LastToken)
-        return CAST.CUnaryNode:new({ Type = self.Tokens.LIST, Value = "LIST" }, self:ListParameters())
+        return CAST.CUnaryNode:new({ Type = self.Tokens.LIST, Value = "LIST" }, self:Parameters(false))
     elseif (self.CurrentToken.Type == self.Tokens.HASH) then
         return self:ListLength()
     end
@@ -314,24 +272,27 @@ function CParser:ListLength()
     return CAST.CUnaryNode:new(self.LastToken, CAST.CNode:new(self.CurrentToken))
 end
 
-function CParser:ListParameters()
+function CParser:Print()
+    return CAST.CUnaryNode:new(self.CurrentToken, self:Expr())
+end
+
+function CParser:Parameters(IsRightParen)
     local Parameters = {}
     self:SetNextToken()
     while true do
         self:SetNextToken()
-        if (self.CurrentToken.Type == self.Tokens.RBRACKET) then
+        if ((self.CurrentToken.Type == self.Tokens.RPAREN and IsRightParen == true) or (self.CurrentToken.Type == self.Tokens.RBRACE and IsRightParen == false)) then
             break
+        elseif (self.CurrentToken.Type == self.Tokens.NUM_TYPE or self.CurrentToken.Type == self.Tokens.STR_TYPE or self.CurrentToken.Type == self.Tokens.BOOL_TYPE) then
+            local VarType = self.CurrentToken
+            self:SetNextToken()
+            table.insert(Parameters, CAST.CUnaryNode:new(VarType, CAST.CNode:new(self.CurrentToken)))
         else
             self:SetNextToken(self.LastToken)
             table.insert(Parameters, self:Expr())
         end
     end
     return Parameters
-end
-
-
-function CParser:Print()
-    return CAST.CUnaryNode:new(self.CurrentToken, self:Expr())
 end
 
 function CParser:SetNextToken(Token)

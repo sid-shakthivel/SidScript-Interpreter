@@ -19,32 +19,6 @@ function CInterpreter:new(LexerInput)
     return NewInterpreter
 end
 
-function CInterpreter:ListEvaluator(CurrentNode)
-    if (CurrentNode.Token.Type == self.Tokens.ASSIGN) then
-        local ListName = CurrentNode.LeftNode.Token.Value
-        local ListIndex = nil
-        local Value = self:ExpressionAssignmentEvaluator(CurrentNode.RightNode)
-        if (CurrentNode.LeftNode.NextNode) then
-            ListIndex = CurrentNode.LeftNode.NextNode.Token.Value
-            self.CallStack:Peek():SetListItem(ListName, ListIndex, Value)
-            return self.CallStack:Peek():GetItem(ListName)[ListIndex]
-        else
-            self.CallStack:Peek():SetItem(ListName, Value)
-            return self.CallStack:Peek():GetItem(ListName)
-        end
-    elseif (CurrentNode.Token.Type == self.Tokens.PUSH) then
-        local ListName = CurrentNode.LeftNode.Token.Value
-        table.insert(self.CallStack:Peek():GetItem(ListName), CurrentNode.RightNode)
-        return self:ExpressionAssignmentEvaluator(CurrentNode.RightNode)
-    elseif (CurrentNode.Token.Type == self.Tokens.REMOVE) then
-        local ListName = CurrentNode.LeftNode.Token.Value
-        table.remove(self.CallStack:Peek():GetItem(ListName), self:ExpressionAssignmentEvaluator(CurrentNode.RightNode))
-    elseif (CurrentNode.Token.Type == self.Tokens.HASH) then
-        local ListName = CurrentNode.NextNode.Token.Value
-        return #(self.CallStack:Peek():GetItem(ListName))
-    end
-end
-
 function CInterpreter:ExpressionAssignmentEvaluator(CurrentNode)
     if (CurrentNode == nil) then
         return nil
@@ -162,6 +136,32 @@ function CInterpreter:FunctionEvaluator(CurrentNode)
     end
 end
 
+function CInterpreter:ListEvaluator(CurrentNode)
+    if (CurrentNode.Token.Type == self.Tokens.ASSIGN) then
+        local ListName = CurrentNode.LeftNode.Token.Value
+        local ListIndex = nil
+        local Value = self:ExpressionAssignmentEvaluator(CurrentNode.RightNode)
+        if (CurrentNode.LeftNode.NextNode) then
+            ListIndex = CurrentNode.LeftNode.NextNode.Token.Value
+            self.CallStack:Peek():SetListItem(ListName, ListIndex, Value)
+            return self.CallStack:Peek():GetItem(ListName)[ListIndex]
+        else
+            self.CallStack:Peek():SetItem(ListName, Value)
+            return self.CallStack:Peek():GetItem(ListName)
+        end
+    elseif (CurrentNode.Token.Type == self.Tokens.PUSH) then
+        local ListName = CurrentNode.LeftNode.Token.Value
+        table.insert(self.CallStack:Peek():GetItem(ListName), CurrentNode.RightNode)
+        return self:ExpressionAssignmentEvaluator(CurrentNode.RightNode)
+    elseif (CurrentNode.Token.Type == self.Tokens.REMOVE) then
+        local ListName = CurrentNode.LeftNode.Token.Value
+        table.remove(self.CallStack:Peek():GetItem(ListName), self:ExpressionAssignmentEvaluator(CurrentNode.RightNode))
+    elseif (CurrentNode.Token.Type == self.Tokens.HASH) then
+        local ListName = CurrentNode.NextNode.Token.Value
+        return #(self.CallStack:Peek():GetItem(ListName))
+    end
+end
+
 function CInterpreter:MainEvaluator(CurrentNode)
     if (CurrentNode.Token.Type == self.Tokens.ASSIGN) then
         return self:ExpressionAssignmentEvaluator(CurrentNode)
@@ -191,10 +191,6 @@ end
 
 function CInterpreter:Execute()
     local Root = self.Parser:Program()
-
-    --print(Root[4].Token.Value)
-    --print(Root[4].LeftNode.Token.Value)
-    --print(Root[4].RightNode.Token.Value)
 
     for i = 1, #Root do
         --self.SemanticAnalyser:Analyse(Root[i])

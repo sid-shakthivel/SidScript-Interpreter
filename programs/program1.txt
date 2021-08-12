@@ -1,1 +1,5 @@
-bool test = true;
+void func foo (num bar, num test) {
+    print bar + test;
+}
+
+foo (12, 12);
