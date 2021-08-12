@@ -14,6 +14,10 @@ function CStackFrame:SetItem(Key, Value)
     self.Members[Key] = Value
 end
 
+function CStackFrame:SetListItem(Key, Index, Value)
+    self.Members[Key][Index] = Value
+end
+
 function CStackFrame:GetItem(Key)
     if (self.Members[Key] ~= nil) then
         return self.Members[Key]

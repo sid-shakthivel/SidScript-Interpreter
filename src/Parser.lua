@@ -145,8 +145,18 @@ end
 
 function CParser:Assign()
     if (self.CurrentToken.Type == self.Tokens.VAR) then
-        self:CheckSetNextToken(self.Tokens.ASSIGN)
-        return CAST.CBinaryNode:new(self.CurrentToken, CAST.CNode:new(self.LastToken), self:Expr())
+        --self:CheckSetNextToken(self.Tokens.ASSIGN)
+        self:SetNextToken()
+        if (self.CurrentToken.Type == self.Tokens.ASSIGN) then
+            return CAST.CBinaryNode:new(self.CurrentToken, CAST.CNode:new(self.LastToken), self:Expr())
+        elseif (self.CurrentToken.Type == self.Tokens.LBRACKET) then
+            self:SetNextToken(self.LastToken)
+            local ListMember = self:ListMember()
+            self:CheckSetNextToken(self.Tokens.ASSIGN)
+            return CAST.CBinaryNode:new(self.CurrentToken, ListMember, self:Expr())
+        else
+            Error:Error("UNEXPECTED IDENTIFIER " .. self.CurrentToken.Value .. " ON LINE " .. self.CurrentToken.LineNumber)
+        end
     else
         local Type = self.CurrentToken
         self:CheckSetNextToken(self.Tokens.VAR)
@@ -243,6 +253,9 @@ function CParser:Value()
         if (self.CurrentToken.Type == self.Tokens.LPAREN) then
             self:SetNextToken(self.LastToken)
             return self:FunctionCall()
+        elseif (self.CurrentToken.Type == self.Tokens.LBRACKET) then
+            self:SetNextToken(self.LastToken)
+            return self:ListMember()
         else
             self:SetNextToken(self.LastToken)
             return CAST.CNode:new(self.CurrentToken)
@@ -255,6 +268,16 @@ function CParser:Value()
         self:SetNextToken(self.LastToken)
         return CAST.CUnaryNode:new({ Type = self.Tokens.LIST }, self:ListParameters())
     end
+end
+
+function CParser:ListMember()
+    local ListName = self.CurrentToken
+    ListName.Type = self.Tokens.LIST
+    self:CheckSetNextToken(self.Tokens.LBRACKET)
+    self:CheckSetNextToken(self.Tokens.NUM)
+    local Index = self.CurrentToken
+    self:CheckSetNextToken(self.Tokens.RBRACKET)
+    return CAST.CUnaryNode:new(ListName, CAST.CNode:new(Index))
 end
 
 function CParser:ListParameters()

@@ -19,11 +19,30 @@ function CInterpreter:new(LexerInput)
     return NewInterpreter
 end
 
+function CInterpreter:ListEvaluator(CurrentNode)
+    if (CurrentNode.Token.Type == self.Tokens.ASSIGN) then
+        local ListName = CurrentNode.LeftNode.Token.Value
+        local ListIndex = nil
+        local Value = self:ExpressionAssignmentEvaluator(CurrentNode.RightNode)
+        if (CurrentNode.LeftNode.NextNode) then
+            ListIndex = CurrentNode.LeftNode.NextNode.Token.Value
+            self.CallStack:Peek():SetListItem(ListName, ListIndex, Value)
+            return self.CallStack:Peek():GetItem(ListName)[ListIndex]
+        else
+            self.CallStack:Peek():SetItem(ListName, Value)
+            return self.CallStack:Peek():GetItem(ListName)
+        end
+    end
+end
+
 function CInterpreter:ExpressionAssignmentEvaluator(CurrentNode)
     if (CurrentNode == nil) then
         return nil
     elseif (CurrentNode.Token.Type == self.Tokens.ASSIGN) then
         local Variable = CurrentNode.LeftNode.Token.Value
+        if (CurrentNode.LeftNode.Token.Type == self.Tokens.LIST) then
+            return self:ListEvaluator()
+        end
         if (CurrentNode.LeftNode.NextNode) then
             Variable = self:ExpressionAssignmentEvaluator(CurrentNode.LeftNode)
         end
@@ -35,7 +54,11 @@ function CInterpreter:ExpressionAssignmentEvaluator(CurrentNode)
     elseif (CurrentNode.Token.Type == self.Tokens.NUM or CurrentNode.Token.Type == self.Tokens.STR or CurrentNode.Token.Type == self.Tokens.BOOL) then
         return CurrentNode.Token.Value
     elseif (CurrentNode.Token.Type == self.Tokens.LIST) then
-        return CurrentNode.NextNode
+        if (type(CurrentNode.NextNode) == "number") then
+            return self.CallStack:Peek():GetItem(CurrentNode.Token.Value)[CurrentNode.NextNode.Token.Value]
+        else
+            return CurrentNode.NextNode
+        end
     elseif (CurrentNode.Token.Type == self.Tokens.VAR) then
         if (self.CallStack:Peek():GetItem(CurrentNode.Token.Value) == nil) then
             return CurrentNode.Token.Value
