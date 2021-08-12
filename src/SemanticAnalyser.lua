@@ -51,6 +51,13 @@ function CSemanticAnalyser:Analyse(CurrentNode)
     elseif (CurrentNode.Token.Type == self.Tokens.ASSIGN) then
         local LeftSide = self:Analyse(CurrentNode.LeftNode)
         local RightSide = self:GetType(CurrentNode.RightNode)
+
+        if (LeftSide.Type == self.Tokens.LIST_TYPE) then
+            local NewListSymbol = CListSymbol:new(CurrentNode.LeftNode.NextNode.Token.Value, self.Tokens.LIST, CurrentNode.RightNode.NextNode)
+            self.CurrentScope:SetSymbol(NewListSymbol)
+            LeftSide = self.CurrentScope:GetSymbol(CurrentNode.LeftNode.NextNode.Token.Value)
+        end
+
         if ((RightSide ~= nil and LeftSide.Type ~= RightSide.Type) and LeftSide.Type ~= self.Tokens.LIST) then
             Error:Error("SEMANTIC ERROR: VARIABLE OF TYPE " .. LeftSide.Type .. " CAN'T BE ASSIGNED TO " .. RightSide.Type .. " ON LINE " .. CurrentNode.Token.LineNumber)
         end
@@ -60,15 +67,23 @@ function CSemanticAnalyser:Analyse(CurrentNode)
         else
             return self.CurrentScope:GetSymbol(CurrentNode.Token.Value)
         end
-    elseif (CurrentNode.Token.Type == self.Tokens.NUM_TYPE or CurrentNode.Token.Type == self.Tokens.STR_TYPE or CurrentNode.Token.Type == self.Tokens.BOOL_TYPE or CurrentNode.Token.Type == self.Tokens.LIST_TYPE) then
+    elseif (CurrentNode.Token.Type == self.Tokens.NUM_TYPE or CurrentNode.Token.Type == self.Tokens.STR_TYPE or CurrentNode.Token.Type == self.Tokens.BOOL_TYPE) then
         if (self.CurrentScope:GetSymbol(CurrentNode.NextNode.Token.Value) ~= nil) then
             Error:Error("SEMANTIC ERROR: VARIABLE " .. CurrentNode.NextNode.Token.Value .. " ALREADY DECLARED")
         end
         local NewSymbol = CSymbol:new(CurrentNode.NextNode.Token.Value, self:GetFormattedVariableType(CurrentNode.Token))
         self.CurrentScope:SetSymbol(NewSymbol)
         return self.CurrentScope:GetSymbol(CurrentNode.NextNode.Token.Value)
+    elseif (CurrentNode.Token.Type == self.Tokens.LIST_TYPE) then
+        if (self.CurrentScope:GetSymbol(CurrentNode.NextNode.Token.Value) ~= nil) then
+            Error:Error("SEMANTIC ERROR: VARIABLE " .. CurrentNode.NextNode.Token.Value .. " ALREADY DECLARED")
+        end
+        return CurrentNode.Token
     elseif (CurrentNode.Token.Type == self.Tokens.LIST) then
         local List = self.CurrentScope:GetSymbol(CurrentNode.Token.Value)
+        if (List == nil) then
+            Error:Error("SEMANTIC ERROR: LIST OF NAME " .. CurrentNode.Token.Value .. " NOT DECLARED")
+        end
         if (List.Type ~= self.Tokens.LIST) then
             Error:Error("SEMANTIC ERROR: CANNOT INDEX NON-LIST ON LINE " .. CurrentNode.Token.LineNumber)
         end
@@ -91,6 +106,15 @@ function CSemanticAnalyser:Analyse(CurrentNode)
         if (self:GetType(CurrentNode.LeftNode).Type ~= self:GetType(CurrentNode.RightNode).Type) then
             Error:Error("SEMANTIC ERROR: COMPARISON OF DIFFERENT TYPES ON LINE " .. CurrentNode.Token.LineNumber)
         end
+    elseif (CurrentNode.Token.Type == self.Tokens.PUSH or CurrentNode.Token.Type == self.Tokens.REMOVE) then
+        local List = self.CurrentScope:GetSymbol(CurrentNode.LeftNode.Token.Value)
+        if (List == nil) then
+            Error:Error("SEMANTIC ERROR: LIST OF NAME " .. CurrentNode.LeftNode.Token.Value .. " NOT DECLARED")
+        elseif (List.Type ~= self.Tokens.LIST) then
+            Error:Error("SEMANTIC ERROR: CANNOT USE LIST OPERATION ON NON-LIST " .. CurrentNode.Token.LineNumber)
+        end
+    elseif (CurrentNode.Token.Type == self.Tokens.PRINT) then
+        self:GetType(CurrentNode.NextNode)
     end
 end
 
@@ -163,10 +187,27 @@ function CSemanticAnalyser:GetType(CurrentNode)
     elseif (CurrentNode.Token.Type == self.Tokens.CALL) then
         return self.CurrentScope:GetSymbol(CurrentNode.LeftNode.Token.Value)
     elseif (CurrentNode.Token.Type == self.Tokens.HASH) then
-    --    Check Type
+        local List = self.CurrentScope:GetSymbol(CurrentNode.NextNode.Token.Value)
+        if (List == nil) then
+            Error:Error("SEMANTIC ERROR: LIST OF NAME " .. CurrentNode.NextNode.Token.Value .. " NOT DECLARED")
+        elseif (List.Type ~= self.Tokens.LIST) then
+            Error:Error("SEMANTIC ERROR: CANNOT USE LIST OPERATION ON NON-LIST" .. CurrentNode.Token.LineNumber)
+        else
+            return { Type = self.Tokens.NUM }
+        end
     elseif (CurrentNode.Token.Type == self.Tokens.LIST) then
         if (CurrentNode.NextNode.Token) then
-        --
+            local Index = CurrentNode.NextNode.Token.Value
+            local List = self.CurrentScope:GetSymbol(CurrentNode.Token.Value)
+            if (List == nil) then
+                Error:Error("SEMANTIC ERROR: LIST OF NAME " .. CurrentNode.Token.Value .. " NOT DECLARED")
+            elseif (Index > #List.Members or Index < 1) then
+                Error:Error("SEMANTIC ERROR: LIST " .. List.Name .. " OUT OF BOUNDS")
+            elseif (List.Type ~= self.Tokens.LIST) then
+                Error:Error("SEMANTIC ERROR: CANNOT INDEX NON-LIST ON LINE " .. CurrentNode.Token.LineNumber)
+            else
+                return List.Members[CurrentNode.NextNode.Token.Value].Token
+            end
         else
             return CurrentNode.Token
         end
@@ -224,7 +265,7 @@ end
 
 CListSymbol = { Name, Type, Members }
 
-function CLexer:new(Name, Type, Members)
+function CListSymbol:new(Name, Type, Members)
     NewListSymbol = {}
     setmetatable(NewListSymbol, self)
     NewListSymbol.Name = Name

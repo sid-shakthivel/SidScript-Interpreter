@@ -152,7 +152,6 @@ function CInterpreter:ListEvaluator(CurrentNode)
     elseif (CurrentNode.Token.Type == self.Tokens.PUSH) then
         local ListName = CurrentNode.LeftNode.Token.Value
         table.insert(self.CallStack:Peek():GetItem(ListName), CurrentNode.RightNode)
-        return self:ExpressionAssignmentEvaluator(CurrentNode.RightNode)
     elseif (CurrentNode.Token.Type == self.Tokens.REMOVE) then
         local ListName = CurrentNode.LeftNode.Token.Value
         table.remove(self.CallStack:Peek():GetItem(ListName), self:ExpressionAssignmentEvaluator(CurrentNode.RightNode))
