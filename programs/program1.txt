@@ -1,5 +1,2 @@
-void func foo (num bar, num test) {
-    print bar + test;
-}
-
-foo (12, 12);
+list i = [1, 2, 3];
+i[1] = 5;

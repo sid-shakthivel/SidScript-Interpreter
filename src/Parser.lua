@@ -13,8 +13,7 @@ function CParser:new(Lexer)
 end
 
 function CParser:Program()
-    local Statements = self:Statements(false)
-    return Statements
+    return self:Statements(false)
 end
 
 function CParser:Statements(IsExpectingRightBrace)
@@ -83,6 +82,10 @@ function CParser:Statement()
     else
         Error:Error("PARSER ERROR: IDENTIFIER " .. self.CurrentToken.Value .. " NOT DEFINED ON LINE " .. self.CurrentToken.LineNumber)
     end
+end
+
+function CParser:Print()
+    return CAST.CUnaryNode:new(self.CurrentToken, self:Expr())
 end
 
 function CParser:FunctionDeclaration()
@@ -178,6 +181,44 @@ function CParser:Condition()
     return CAST.CBinaryNode:new(self.CurrentToken, Expr1, self:Expr())
 end
 
+function CParser:ListMember()
+    local ListName = self.CurrentToken
+    ListName.Type = self.Tokens.LIST
+    self:CheckSetNextToken(self.Tokens.LBRACKET)
+    self:CheckSetNextToken(self.Tokens.NUM)
+    local Index = self.CurrentToken
+    self:CheckSetNextToken(self.Tokens.RBRACKET)
+    return CAST.CUnaryNode:new(ListName, CAST.CNode:new(Index))
+end
+
+function CParser:ListPush()
+    local ListPush = self.CurrentToken
+    self:CheckSetNextToken(self.Tokens.LPAREN)
+    self:CheckSetNextToken(self.Tokens.VAR)
+    local List = self.CurrentToken
+    self:CheckSetNextToken(self.Tokens.COMMA)
+    local NewListMember = self:Value()
+    self:CheckSetNextToken(self.Tokens.RPAREN)
+    return CAST.CBinaryNode:new(ListPush, CAST.CNode:new(List), NewListMember)
+end
+
+function CParser:ListRemove()
+    local ListPush = self.CurrentToken
+    self:CheckSetNextToken(self.Tokens.LPAREN)
+    self:CheckSetNextToken(self.Tokens.VAR)
+    local List = self.CurrentToken
+    self:CheckSetNextToken(self.Tokens.COMMA)
+    self:CheckSetNextToken(self.Tokens.NUM)
+    local ListIndex = self.CurrentToken
+    self:CheckSetNextToken(self.Tokens.RPAREN)
+    return CAST.CBinaryNode:new(ListPush, CAST.CNode:new(List), CAST.CNode:new(ListIndex))
+end
+
+function CParser:ListLength()
+    self:SetNextToken()
+    return CAST.CUnaryNode:new(self.LastToken, CAST.CNode:new(self.CurrentToken))
+end
+
 function CParser:Expr()
     local Node = self:Term()
     while true do
@@ -231,49 +272,9 @@ function CParser:Value()
         return CAST.CUnaryNode:new({ Type = self.Tokens.LIST, Value = "LIST" }, self:Parameters(false))
     elseif (self.CurrentToken.Type == self.Tokens.HASH) then
         return self:ListLength()
+    else
+        Error:Error("PARSER ERROR: UNEXPECTED IDENTIFIER " .. self.CurrentToken.Value .. " ON LINE " .. self.CurrentToken.LineNumber)
     end
-end
-
-function CParser:ListPush()
-    local ListPush = self.CurrentToken
-    self:CheckSetNextToken(self.Tokens.LPAREN)
-    self:CheckSetNextToken(self.Tokens.VAR)
-    local List = self.CurrentToken
-    self:CheckSetNextToken(self.Tokens.COMMA)
-    local NewListMember = self:Value()
-    self:CheckSetNextToken(self.Tokens.RPAREN)
-    return CAST.CBinaryNode:new(ListPush, CAST.CNode:new(List), NewListMember)
-end
-
-function CParser:ListRemove()
-    local ListPush = self.CurrentToken
-    self:CheckSetNextToken(self.Tokens.LPAREN)
-    self:CheckSetNextToken(self.Tokens.VAR)
-    local List = self.CurrentToken
-    self:CheckSetNextToken(self.Tokens.COMMA)
-    self:CheckSetNextToken(self.Tokens.NUM)
-    local ListIndex = self.CurrentToken
-    self:CheckSetNextToken(self.Tokens.RPAREN)
-    return CAST.CBinaryNode:new(ListPush, CAST.CNode:new(List), CAST.CNode:new(ListIndex))
-end
-
-function CParser:ListMember()
-    local ListName = self.CurrentToken
-    ListName.Type = self.Tokens.LIST
-    self:CheckSetNextToken(self.Tokens.LBRACKET)
-    self:CheckSetNextToken(self.Tokens.NUM)
-    local Index = self.CurrentToken
-    self:CheckSetNextToken(self.Tokens.RBRACKET)
-    return CAST.CUnaryNode:new(ListName, CAST.CNode:new(Index))
-end
-
-function CParser:ListLength()
-    self:SetNextToken()
-    return CAST.CUnaryNode:new(self.LastToken, CAST.CNode:new(self.CurrentToken))
-end
-
-function CParser:Print()
-    return CAST.CUnaryNode:new(self.CurrentToken, self:Expr())
 end
 
 function CParser:Parameters(IsRightParen)
@@ -281,8 +282,10 @@ function CParser:Parameters(IsRightParen)
     self:SetNextToken()
     while true do
         self:SetNextToken()
-        if ((self.CurrentToken.Type == self.Tokens.RPAREN and IsRightParen == true) or (self.CurrentToken.Type == self.Tokens.RBRACE and IsRightParen == false)) then
+        if ((self.CurrentToken.Type == self.Tokens.RPAREN and IsRightParen == true) or (self.CurrentToken.Type == self.Tokens.RBRACKET and IsRightParen == false)) then
             break
+        elseif (self.CurrentToken.Type == self.Tokens.COMMA) then
+            ;
         elseif (self.CurrentToken.Type == self.Tokens.NUM_TYPE or self.CurrentToken.Type == self.Tokens.STR_TYPE or self.CurrentToken.Type == self.Tokens.BOOL_TYPE) then
             local VarType = self.CurrentToken
             self:SetNextToken()
@@ -293,16 +296,6 @@ function CParser:Parameters(IsRightParen)
         end
     end
     return Parameters
-end
-
-function CParser:SetNextToken(Token)
-    self.LastToken = self.CurrentToken
-    if (Token ~= nil) then
-        self.CurrentToken = Token
-        self.Lexer:SetLastToken()
-    else
-        self.CurrentToken = self.Lexer:GetNextToken()
-    end
 end
 
 function CParser:SemicolonTest()
@@ -316,6 +309,16 @@ function CParser:CheckSetNextToken(Type)
     self:SetNextToken()
     if (self.CurrentToken.Type ~= Type) then
         Error:Error("UNEXPECTED IDENTIFIER " .. self.CurrentToken.Value .. " ON LINE " .. self.CurrentToken.LineNumber)
+    end
+end
+
+function CParser:SetNextToken(Token)
+    self.LastToken = self.CurrentToken
+    if (Token ~= nil) then
+        self.CurrentToken = Token
+        self.Lexer:SetLastToken()
+    else
+        self.CurrentToken = self.Lexer:GetNextToken()
     end
 end
 

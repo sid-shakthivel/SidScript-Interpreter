@@ -193,11 +193,11 @@ function CInterpreter:Execute()
     local Root = self.Parser:Program()
 
     for i = 1, #Root do
-        --self.SemanticAnalyser:Analyse(Root[i])
+        self.SemanticAnalyser:Analyse(Root[i])
     end
 
     self.CallStack:Push(CSTackFrame:new("Main", nil))
-    self:Interpret(Root)
+    --self:Interpret(Root)
     self.CallStack:Pop()
 end
 

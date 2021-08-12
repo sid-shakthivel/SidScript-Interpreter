@@ -1,54 +1,5 @@
 local Error = require("src.Error")
 
-CSymbol = { Name, Type }
-
-function CSymbol:new(Name, Type)
-    NewSymbol = {}
-    setmetatable(NewSymbol, self)
-    NewSymbol.Name = Name
-    NewSymbol.Type = Type
-    self.__index = self
-    return NewSymbol
-end
-
-CFunctionSymbol = { Name, Type, Parameters }
-
-function CFunctionSymbol:new(Name, Type, Parameters)
-    NewFunctionSymbol = {}
-    setmetatable(NewFunctionSymbol, self)
-    NewFunctionSymbol.Name = Name
-    NewFunctionSymbol.Type = Type
-    NewFunctionSymbol.Parameters = Parameters
-    self.__index = self
-    return NewFunctionSymbol
-end
-
-CSymbolTable = { Name, Symbols, EnclosingScope }
-
-function CSymbolTable:new(Name, EnclosingScope)
-    NewSymbolTable = {}
-    setmetatable(NewSymbolTable, self)
-    NewSymbolTable.Name = Name
-    NewSymbolTable.Symbols = {}
-    NewSymbolTable.EnclosingScope = EnclosingScope
-    self.__index = self
-    return NewSymbolTable
-end
-
-function CSymbolTable:SetSymbol(Symbol)
-    self.Symbols[Symbol.Name] = Symbol
-end
-
-function CSymbolTable:GetSymbol(Name)
-    if (self.Symbols[Name]) then
-        return self.Symbols[Name]
-    elseif (self.EnclosingScope == nil) then
-        return nil
-    else
-        return self.EnclosingScope:GetSymbol(Name)
-    end
-end
-
 CSemanticAnalyser = { Tokens, CurrentScope, GlobalScope }
 
 function CSemanticAnalyser:new(Tokens)
@@ -66,13 +17,41 @@ function CSemanticAnalyser:Analyse(CurrentNode)
         if (self.CurrentScope:GetSymbol(CurrentNode.CentreLeftNode.Token.Value) ~= nil) then
             Error:Error("SEMANTIC ERROR: FUNCTION OF NAME " .. CurrentNode.CentreLeftNode.Token.Value .. " ALREADY DECLARED")
         end
+        for i = 1, #CurrentNode.LeftNode do
+            self:GetFormattedVariableType(CurrentNode.LeftNode[i].Token)
+        end
         local NewSymbol = CFunctionSymbol:new(CurrentNode.CentreLeftNode.Token.Value, self:GetFormattedVariableType(CurrentNode.CentreRightNode.Token), CurrentNode.LeftNode)
         self.CurrentScope:SetSymbol(NewSymbol)
         self:BuildSymbolTable(CurrentNode.CentreLeftNode.Token.Value, ConcatenateTable(CurrentNode.LeftNode, CurrentNode.RightNode))
+    elseif (CurrentNode.Token.Type == self.Tokens.CALL) then
+        local Function = self.CurrentScope:GetSymbol(CurrentNode.LeftNode.Token.Value)
+        if (Function == nil) then
+            Error:Error("SEMANTIC ERROR: NO FUNCTION OF NAME " .. CurrentNode.LeftNode.Token.Value)
+        end
+        if (#Function.Parameters ~= #CurrentNode.RightNode) then
+            Error:Error("SEMANTIC ERROR: INSUFFICIENT ARGUMENTS PASSED TO FUNCTION " .. Function.Name)
+        end
+        for i = 1, #Function.Parameters do
+            if (self:GetType(CurrentNode.RightNode[i]) == nil or self:GetFormattedVariableType(Function.Parameters[i].Token) ~= self:GetType(CurrentNode.RightNode[i]).Type) then
+                Error:Error("SEMANTIC ERROR: ARGUMENTS TYPES MUST MATCH FUNCTION PARAMETERS TYPES ON LINE " .. CurrentNode.LeftNode.Token.LineNumber)
+            end
+        end
+    elseif (CurrentNode.Token.Type == self.Tokens.RETURN) then
+        if (self.CurrentScope.Name == "Global") then
+            Error:Error("SEMANTIC ERROR: RETURN MUST BE CALLED IN FUNCTION ON LINE " .. CurrentNode.Token.LineNumber)
+        end
+        local Function = self.CurrentScope.EnclosingScope:GetSymbol(self.CurrentScope.Name)
+        if (Function.Type == self.Tokens.VOID) then
+            Error:Error("SEMANTIC ERROR: VOID FUNCTIONS CANNOT RETURN VALUES ON LINE ".. CurrentNode.Token.LineNumber)
+        end
+        local ReturnType = self:GetType(CurrentNode.NextNode)
+        if (Function.Type ~= ReturnType.Type) then
+            Error:Error("SEMANTIC ERROR: " .. Function.Type .. " FUNCTIONS CANNOT RETURN " .. ReturnType.Type .. " ON LINE " .. CurrentNode.Token.LineNumber)
+        end
     elseif (CurrentNode.Token.Type == self.Tokens.ASSIGN) then
         local LeftSide = self:Analyse(CurrentNode.LeftNode)
         local RightSide = self:GetType(CurrentNode.RightNode)
-        if (RightSide ~= nil and LeftSide.Type ~= RightSide.Type) then
+        if ((RightSide ~= nil and LeftSide.Type ~= RightSide.Type) and LeftSide.Type ~= self.Tokens.LIST) then
             Error:Error("SEMANTIC ERROR: VARIABLE OF TYPE " .. LeftSide.Type .. " CAN'T BE ASSIGNED TO " .. RightSide.Type .. " ON LINE " .. CurrentNode.Token.LineNumber)
         end
     elseif (CurrentNode.Token.Type == self.Tokens.VAR) then
@@ -88,16 +67,12 @@ function CSemanticAnalyser:Analyse(CurrentNode)
         local NewSymbol = CSymbol:new(CurrentNode.NextNode.Token.Value, self:GetFormattedVariableType(CurrentNode.Token))
         self.CurrentScope:SetSymbol(NewSymbol)
         return self.CurrentScope:GetSymbol(CurrentNode.NextNode.Token.Value)
-    elseif (CurrentNode.Token.Type == self.Tokens.CALL) then
-        local Function = self.CurrentScope:GetSymbol(CurrentNode.LeftNode.Token.Value)
-        if (#Function.Parameters ~= #CurrentNode.RightNode) then
-            Error:Error("SEMANTIC ERROR: INSUFFICIENT ARGUMENTS PASSED TO FUNCTION " .. Function.Name)
+    elseif (CurrentNode.Token.Type == self.Tokens.LIST) then
+        local List = self.CurrentScope:GetSymbol(CurrentNode.Token.Value)
+        if (List.Type ~= self.Tokens.LIST) then
+            Error:Error("SEMANTIC ERROR: CANNOT INDEX NON-LIST ON LINE " .. CurrentNode.Token.LineNumber)
         end
-        for i = 1, #Function.Parameters do
-            if (self:GetFormattedVariableType(Function.Parameters[i].Token) ~= self:GetType(CurrentNode.RightNode[i]).Type) then
-                Error:Error("SEMANTIC ERROR: ARGUMENTS TYPES MUST MATCH FUNCTION PARAMETERS TYPES ON LINE " .. CurrentNode.Token.LineNumber)
-            end
-        end
+        return CurrentNode.Token
     elseif (CurrentNode.Token.Type == self.Tokens.IF) then
         self:Analyse(CurrentNode.CentreNode)
         self.CurrentScope = NewSymbolTable.EnclosingScope
@@ -151,7 +126,7 @@ function CSemanticAnalyser:GetType(CurrentNode)
         return self:GetType(CurrentNode.NextNode)
     elseif (CurrentNode.Token.Type == self.Tokens.VAR) then
         return self.CurrentScope:GetSymbol(CurrentNode.Token.Value)
-    elseif (CurrentNode.Token.Type == self.Tokens.NUM or CurrentNode.Token.Type == self.Tokens.STR or CurrentNode.Token.Type == self.Tokens.BOOL or CurrentNode.Token.Type == self.Tokens.LIST) then
+    elseif (CurrentNode.Token.Type == self.Tokens.NUM or CurrentNode.Token.Type == self.Tokens.STR or CurrentNode.Token.Type == self.Tokens.BOOL) then
         return CurrentNode.Token
     elseif (CurrentNode.Token.Type == self.Tokens.MUL) then
         if (self:GetType(CurrentNode.RightNode).Type == self.Tokens.NUM and self:GetType(CurrentNode.LeftNode)) then
@@ -187,7 +162,76 @@ function CSemanticAnalyser:GetType(CurrentNode)
         end
     elseif (CurrentNode.Token.Type == self.Tokens.CALL) then
         return self.CurrentScope:GetSymbol(CurrentNode.LeftNode.Token.Value)
+    elseif (CurrentNode.Token.Type == self.Tokens.HASH) then
+    --    Check Type
+    elseif (CurrentNode.Token.Type == self.Tokens.LIST) then
+        if (CurrentNode.NextNode.Token) then
+        --
+        else
+            return CurrentNode.Token
+        end
     end
+end
+
+CSymbolTable = { Name, Symbols, EnclosingScope }
+
+function CSymbolTable:new(Name, EnclosingScope)
+    NewSymbolTable = {}
+    setmetatable(NewSymbolTable, self)
+    NewSymbolTable.Name = Name
+    NewSymbolTable.Symbols = {}
+    NewSymbolTable.EnclosingScope = EnclosingScope
+    self.__index = self
+    return NewSymbolTable
+end
+
+function CSymbolTable:SetSymbol(Symbol)
+    self.Symbols[Symbol.Name] = Symbol
+end
+
+function CSymbolTable:GetSymbol(Name)
+    if (self.Symbols[Name]) then
+        return self.Symbols[Name]
+    elseif (self.EnclosingScope == nil) then
+        return nil
+    else
+        return self.EnclosingScope:GetSymbol(Name)
+    end
+end
+
+CSymbol = { Name, Type }
+
+function CSymbol:new(Name, Type)
+    NewSymbol = {}
+    setmetatable(NewSymbol, self)
+    NewSymbol.Name = Name
+    NewSymbol.Type = Type
+    self.__index = self
+    return NewSymbol
+end
+
+CFunctionSymbol = { Name, Type, Parameters }
+
+function CFunctionSymbol:new(Name, Type, Parameters)
+    NewFunctionSymbol = {}
+    setmetatable(NewFunctionSymbol, self)
+    NewFunctionSymbol.Name = Name
+    NewFunctionSymbol.Type = Type
+    NewFunctionSymbol.Parameters = Parameters
+    self.__index = self
+    return NewFunctionSymbol
+end
+
+CListSymbol = { Name, Type, Members }
+
+function CLexer:new(Name, Type, Members)
+    NewListSymbol = {}
+    setmetatable(NewListSymbol, self)
+    NewListSymbol.Name = Name
+    NewListSymbol.Type = Type
+    NewListSymbol.Members = Members
+    self.__index = self
+    return NewListSymbol
 end
 
 function ConcatenateTable(Table1, Table2)
@@ -200,6 +244,5 @@ function ConcatenateTable(Table1, Table2)
     end
     return NewTable
 end
-
 
 return { CSemanticAnalyser }
