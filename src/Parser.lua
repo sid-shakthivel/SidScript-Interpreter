@@ -266,7 +266,7 @@ function CParser:Value()
         return self:Expr()
     elseif (self.CurrentToken.Type == self.Tokens.LBRACKET) then
         self:SetNextToken(self.LastToken)
-        return CAST.CUnaryNode:new({ Type = self.Tokens.LIST }, self:ListParameters())
+        return CAST.CUnaryNode:new({ Type = self.Tokens.LIST, Value = "LIST" }, self:ListParameters())
     end
 end
 

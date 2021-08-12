@@ -15,7 +15,7 @@ function CStackFrame:SetItem(Key, Value)
 end
 
 function CStackFrame:SetListItem(Key, Index, Value)
-    self.Members[Key][Index] = Value
+    self.Members[Key][Index].Token.Value = Value
 end
 
 function CStackFrame:GetItem(Key)
