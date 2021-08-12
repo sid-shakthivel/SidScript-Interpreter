@@ -1,3 +1,5 @@
 list a = [1, 2, 3];
-a[1] = 45;
-print a[1];
+push(a, 23);
+print a[4];
+remove(a, 4);
+print a[4];

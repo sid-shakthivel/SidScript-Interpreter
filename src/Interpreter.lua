@@ -38,7 +38,7 @@ function CInterpreter:ListEvaluator(CurrentNode)
         return self:ExpressionAssignmentEvaluator(CurrentNode.RightNode)
     elseif (CurrentNode.Token.Type == self.Tokens.REMOVE) then
         local ListName = CurrentNode.LeftNode.Token.Value
-        table.remove(self.CallStack:Peek():GetItem(ListName), CurrentNode.RightNode)
+        table.remove(self.CallStack:Peek():GetItem(ListName), self:ExpressionAssignmentEvaluator(CurrentNode.RightNode))
     end
 end
 
@@ -170,7 +170,7 @@ function CInterpreter:MainEvaluator(CurrentNode)
         return self:FunctionEvaluator(CurrentNode)
     elseif (CurrentNode.Token.Type == self.Tokens.RETURN) then
         return self:ExpressionAssignmentEvaluator(CurrentNode.NextNode)
-    elseif (CurrentNode.Token.Type == self.Tokens.PUSH or CurrentNode.Token.Type == self.Token.REMOVE) then
+    elseif (CurrentNode.Token.Type == self.Tokens.PUSH or CurrentNode.Token.Type == self.Tokens.REMOVE) then
         return self:ListEvaluator(CurrentNode)
     end
     return 0
@@ -186,6 +186,10 @@ end
 
 function CInterpreter:Execute()
     local Root = self.Parser:Program()
+
+    --print(Root[4].Token.Value)
+    --print(Root[4].LeftNode.Token.Value)
+    --print(Root[4].RightNode.Token.Value)
 
     for i = 1, #Root do
         --self.SemanticAnalyser:Analyse(Root[i])

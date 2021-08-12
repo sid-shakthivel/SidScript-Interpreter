@@ -76,6 +76,10 @@ function CParser:Statement()
         return self:Expr()
     elseif (Type == self.Tokens.RETURN) then
         return self:Return()
+    elseif (Type == self.Tokens.REMOVE) then
+        return self:ListRemove()
+    elseif (Type == self.Tokens.PUSH) then
+        return self:ListPush()
     else
         Error:Error("PARSER ERROR: IDENTIFIER " .. self.CurrentToken.Value .. " NOT DEFINED ON LINE " .. self.CurrentToken.LineNumber)
     end
@@ -256,16 +260,6 @@ function CParser:Value()
         elseif (self.CurrentToken.Type == self.Tokens.LBRACKET) then
             self:SetNextToken(self.LastToken)
             return self:ListMember()
-        elseif (self.CurrentToken.Type == self.Tokens.DOT) then
-            local CurrentToken = self.LastToken
-            self:SetNextToken()
-            if (self.CurrentToken.Type == self.Tokens.PUSH) then
-                self:SetNextToken(CurrentToken)
-                return self:ListPush()
-            elseif (self.CurrentToken.Type == self.Tokens.REMOVE) then
-                self:SetNextToken(CurrentToken)
-                return self:ListRemove()
-            end
         else
             self:SetNextToken(self.LastToken)
             return CAST.CNode:new(self.CurrentToken)
@@ -281,25 +275,26 @@ function CParser:Value()
 end
 
 function CParser:ListPush()
-    local ListName = self.CurrentToken.Value
-    self:CheckSetNextToken(self.Tokens.DOT)
-    self:CheckSetNextToken(self.Tokens.PUSH)
     local ListPush = self.CurrentToken
     self:CheckSetNextToken(self.Tokens.LPAREN)
+    self:CheckSetNextToken(self.Tokens.VAR)
+    local List = self.CurrentToken
+    self:CheckSetNextToken(self.Tokens.COMMA)
     local NewListMember = self:Value()
     self:CheckSetNextToken(self.Tokens.RPAREN)
-    return CAST.CBinaryNode:new(ListPush, CAST.CUnaryNode:new(ListName), CAST.CUnaryNode:new(NewListMember))
+    return CAST.CBinaryNode:new(ListPush, CAST.CNode:new(List), NewListMember)
 end
 
 function CParser:ListRemove()
-    local ListName = self.CurrentToken.Value
-    self:CheckSetNextToken(self.Tokens.DOT)
-    self:CheckSetNextToken(self.Tokens.REMOVE)
-    local ListRemove = self.CurrentToken
+    local ListPush = self.CurrentToken
     self:CheckSetNextToken(self.Tokens.LPAREN)
-    local NewListMember = self:Value()
+    self:CheckSetNextToken(self.Tokens.VAR)
+    local List = self.CurrentToken
+    self:CheckSetNextToken(self.Tokens.COMMA)
+    self:CheckSetNextToken(self.Tokens.NUM)
+    local ListIndex = self.CurrentToken
     self:CheckSetNextToken(self.Tokens.RPAREN)
-    return CAST.CBinaryNode:new(ListRemove, CAST.CUnaryNode:new(ListName), CAST.CUnaryNode:new(NewListMember))
+    return CAST.CBinaryNode:new(ListPush, CAST.CNode:new(List), CAST.CNode:new(ListIndex))
 end
 
 function CParser:ListMember()
