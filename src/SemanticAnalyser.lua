@@ -40,7 +40,7 @@ function CSemanticAnalyser:Analyse(CurrentNode)
         if (self.CurrentScope.Name == "Global") then
             Error:Error("SEMANTIC ERROR: RETURN MUST BE CALLED IN FUNCTION ON LINE " .. CurrentNode.Token.LineNumber)
         end
-        local Function = self.CurrentScope.EnclosingScope:GetSymbol(self.CurrentScope.Name)
+        local Function = self.CurrentScope:GetLastFunction(self.CurrentScope)
         if (Function.Type == self.Tokens.VOID) then
             Error:Error("SEMANTIC ERROR: VOID FUNCTIONS CANNOT RETURN VALUES ON LINE ".. CurrentNode.Token.LineNumber)
         end
@@ -90,7 +90,7 @@ function CSemanticAnalyser:Analyse(CurrentNode)
         return CurrentNode.Token
     elseif (CurrentNode.Token.Type == self.Tokens.IF) then
         self:Analyse(CurrentNode.CentreNode)
-        self.CurrentScope = NewSymbolTable.EnclosingScope
+        --self.CurrentScope = NewSymbolTable.EnclosingScope
         self:BuildSymbolTable(("if " .. math.random(1000000)), CurrentNode.LeftNode)
         if (CurrentNode.RightNode ~= nil) then
             self:BuildSymbolTable(("else " .. math.random(1000000)), CurrentNode.RightNode)
@@ -259,6 +259,16 @@ function CSymbolTable:GetSymbol(Name)
         return nil
     else
         return self.EnclosingScope:GetSymbol(Name)
+    end
+end
+
+function CSymbolTable:GetLastFunction(Scope)
+    if (Scope.Name == "Global") then
+        Error:Error("SEMANTIC ERROR: CAN ONLY RETURN IN FUNCTION")
+    elseif (Scope.EnclosingScope:GetSymbol(Scope.Name) and Scope.EnclosingScope:GetSymbol(Scope.Name).Type == "NUM") then
+        return Scope.EnclosingScope:GetSymbol(Scope.Name)
+    else
+        return CSymbolTable:GetLastFunction(Scope.EnclosingScope)
     end
 end
 
