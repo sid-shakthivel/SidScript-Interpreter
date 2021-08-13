@@ -196,7 +196,7 @@ function CInterpreter:Execute()
     end
 
     self.CallStack:Push(CSTackFrame:new("Main", nil))
-    --self:Interpret(Root)
+    self:Interpret(Root)
     self.CallStack:Pop()
 end
 

@@ -18,9 +18,6 @@ local CurrentLine = File:read("*line")
 while CurrentLine ~= nil do
     Program = Program .. "\n" .. CurrentLine
     CurrentLine = File:read("*line")
-    if (CurrentLine ~= nil  and CurrentLine:sub(1, 1) == '#') then
-        CurrentLine = File:read("*line")
-    end
 end
 
 File:close()

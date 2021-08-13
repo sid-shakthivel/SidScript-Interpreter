@@ -93,8 +93,12 @@ function CLexer:GetNextToken()
         self.CurrentPosition = self.CurrentPosition + 1
     elseif (self.InvertedTokens[Character] ~= nil) then
         Token = CToken:new(Character, self.Tokens[self.InvertedTokens[Character]], self.LineNumber)
+    elseif (Character == '`') then
+        local NextTemplateLiteral = self.Input:find("`", (self.CurrentPosition+1)) - 1;
+        local Result = self.Input:sub(self.CurrentPosition+1, NextTemplateLiteral)
+        Token = CToken:new(Result, self.Tokens.STR, self.LineNumber)
+        self.CurrentPosition = NextTemplateLiteral + 1
     else
-        local NextTemplateLiteral = (self.Input:find("`", (self.CurrentPosition+1)) or #self.Input)
         local NextLeftParenthesis = self.Input:find("%(", self.CurrentPosition) or #self.Input
         local NextRightParenthesis = self.Input:find("%)", self.CurrentPosition) or #self.Input
         local NextSpace = self.Input:find(" ", self.CurrentPosition) or #self.Input
@@ -103,13 +107,10 @@ function CLexer:GetNextToken()
         local NextSign = self.Input:find("[*/+-]", self.CurrentPosition) or #self.Input
         local NextLeftBracket = self.Input:find("%[", self.CurrentPosition) or #self.Input
         local NextRightBracket = self.Input:find("%]", self.CurrentPosition) or #self.Input
-        local Answer = math.min(NextLeftParenthesis, NextSpace, NextSemi, NextRightParenthesis, NextSign, NextLeftBracket, NextRightBracket, NextComma, NextTemplateLiteral)
+        local Answer = math.min(NextLeftParenthesis, NextSpace, NextSemi, NextRightParenthesis, NextSign, NextLeftBracket, NextRightBracket, NextComma)
         local Result = self.Input:sub(self.CurrentPosition, (Answer-1))
 
-        if (Character == "`") then
-            Token = CToken:new(self.Input:sub(self.CurrentPosition+1, (Answer-1)), self.Tokens.STR, self.LineNumber)
-            Answer = Answer + 1
-        elseif (self.InvertedTokens[Result]) then
+        if (self.InvertedTokens[Result]) then
             Token = CToken:new(Result, self.Tokens[self.InvertedTokens[Result]], self.LineNumber)
         else
             Token = CToken:new(Result, self.Tokens.VAR, self.LineNumber)
