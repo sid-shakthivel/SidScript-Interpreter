@@ -11,6 +11,10 @@ elseif (assert(io.open(FileName, "r")) == false) then
     Error:Error("FILE ERROR: CANNOT OPEN FILE " .. FileName)
 end
 
+function trim (s)
+    return (string.gsub(s, "^%s*(.-)%s*$", "%1"))
+end
+
 local File = io.open(FileName, "r")
 local Program = ""
 local CurrentLine = File:read("*line")
@@ -18,6 +22,9 @@ local CurrentLine = File:read("*line")
 while CurrentLine ~= nil do
     Program = Program .. "\n" .. CurrentLine
     CurrentLine = File:read("*line")
+    if (CurrentLine ~= nil) then
+        CurrentLine = trim(CurrentLine)
+    end
 end
 
 File:close()
