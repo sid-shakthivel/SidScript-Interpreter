@@ -1,3 +1,5 @@
+#! /usr/bin/env lua
+
 local CInterpreter = require("src.Interpreter")[1]
 local Error = require("src.Error")
 

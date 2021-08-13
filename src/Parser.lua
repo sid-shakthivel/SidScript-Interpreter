@@ -176,7 +176,7 @@ function CParser:Condition()
     local Expr1 = self:Expr()
     self:SetNextToken()
     if (self.CurrentToken.Type ~= self.Tokens.EQUALS and self.CurrentToken.Type ~= self.Tokens.LESSER and self.CurrentToken.Type ~= self.Tokens.GREATER) then
-        Error:Error("UNEXPECTED IDENTIFIER " .. self.CurrentToken.Value .. " ON LINE " .. self.CurrentToken.LineNumber)
+        Error:Error("PARSER ERROR: UNEXPECTED IDENTIFIER " .. self.CurrentToken.Value .. " ON LINE " .. self.CurrentToken.LineNumber)
     end
     return CAST.CBinaryNode:new(self.CurrentToken, Expr1, self:Expr())
 end
@@ -185,7 +185,8 @@ function CParser:ListMember()
     local ListName = self.CurrentToken
     ListName.Type = self.Tokens.LIST
     self:CheckSetNextToken(self.Tokens.LBRACKET)
-    self:CheckSetNextToken(self.Tokens.NUM)
+    --self:CheckSetNextToken(self.Tokens.NUM)
+    self:SetNextToken()
     local Index = self.CurrentToken
     self:CheckSetNextToken(self.Tokens.RBRACKET)
     return CAST.CUnaryNode:new(ListName, CAST.CNode:new(Index))
@@ -208,10 +209,9 @@ function CParser:ListRemove()
     self:CheckSetNextToken(self.Tokens.VAR)
     local List = self.CurrentToken
     self:CheckSetNextToken(self.Tokens.COMMA)
-    self:CheckSetNextToken(self.Tokens.NUM)
-    local ListIndex = self.CurrentToken
+    local ListIndex = self:Value()
     self:CheckSetNextToken(self.Tokens.RPAREN)
-    return CAST.CBinaryNode:new(ListPush, CAST.CNode:new(List), CAST.CNode:new(ListIndex))
+    return CAST.CBinaryNode:new(ListPush, CAST.CNode:new(List), ListIndex)
 end
 
 function CParser:ListLength()

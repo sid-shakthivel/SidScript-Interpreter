@@ -3,6 +3,7 @@ local CParser = require("src.Parser")[1]
 local CSemanticAnalyser = require("src.SemanticAnalyser")[1]
 local CStack = require("src.Stack")[1]
 local CSTackFrame = require("src.StackFrame")[1]
+local Error = require("src.Error")
 
 CInterpreter = { Lexer, Parser, SemanticAnalyser, Tokens, CallStack }
 
@@ -39,7 +40,8 @@ function CInterpreter:ExpressionAssignmentEvaluator(CurrentNode)
         return CurrentNode.Token.Value
     elseif (CurrentNode.Token.Type == self.Tokens.LIST) then
         if (CurrentNode.NextNode.Token) then
-            return self:ExpressionAssignmentEvaluator(self.CallStack:Peek():GetItem(CurrentNode.Token.Value)[CurrentNode.NextNode.Token.Value])
+            local Index = self:ExpressionAssignmentEvaluator(CurrentNode.NextNode)
+            return self:ExpressionAssignmentEvaluator(self.CallStack:Peek():GetItem(CurrentNode.Token.Value)[Index])
         else
             return CurrentNode.NextNode
         end
@@ -154,10 +156,15 @@ function CInterpreter:ListEvaluator(CurrentNode)
         table.insert(self.CallStack:Peek():GetItem(ListName), CurrentNode.RightNode)
     elseif (CurrentNode.Token.Type == self.Tokens.REMOVE) then
         local ListName = CurrentNode.LeftNode.Token.Value
-        table.remove(self.CallStack:Peek():GetItem(ListName), self:ExpressionAssignmentEvaluator(CurrentNode.RightNode))
+        local List= self.CallStack:Peek():GetItem(ListName)
+        local Index = self:ExpressionAssignmentEvaluator(CurrentNode.RightNode)
+        if (Index > #List or Index < 1) then
+            Error:Error("INTERPRETER ERROR: LIST " .. ListName .. " IS OUT OUT BOUNDS ON LINE " .. CurrentNode.Token.LineNumber)
+        end
+        table.remove(List, Index)
     elseif (CurrentNode.Token.Type == self.Tokens.HASH) then
         local ListName = CurrentNode.NextNode.Token.Value
-        return #(self.CallStack:Peek():GetItem(ListName))
+        return (#(self.CallStack:Peek():GetItem(ListName))) + 1
     end
 end
 

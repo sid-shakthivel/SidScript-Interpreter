@@ -106,12 +106,25 @@ function CSemanticAnalyser:Analyse(CurrentNode)
         if (self:GetType(CurrentNode.LeftNode).Type ~= self:GetType(CurrentNode.RightNode).Type) then
             Error:Error("SEMANTIC ERROR: COMPARISON OF DIFFERENT TYPES ON LINE " .. CurrentNode.Token.LineNumber)
         end
-    elseif (CurrentNode.Token.Type == self.Tokens.PUSH or CurrentNode.Token.Type == self.Tokens.REMOVE) then
+    elseif (CurrentNode.Token.Type == self.Tokens.PUSH) then
         local List = self.CurrentScope:GetSymbol(CurrentNode.LeftNode.Token.Value)
+        local NewListMember = self:GetType(CurrentNode.RightNode)
         if (List == nil) then
             Error:Error("SEMANTIC ERROR: LIST OF NAME " .. CurrentNode.LeftNode.Token.Value .. " NOT DECLARED")
         elseif (List.Type ~= self.Tokens.LIST) then
             Error:Error("SEMANTIC ERROR: CANNOT USE LIST OPERATION ON NON-LIST " .. CurrentNode.Token.LineNumber)
+        elseif (NewListMember.Type ~= self.Tokens.NUM) then
+            Error:Error("SEMANTIC ERROR: LISTS CAN ONLY CONTAIN NUMS ON LINE " .. CurrentNode.Token.LineNumber)
+        end
+    elseif (CurrentNode.Token.Type == self.Tokens.REMOVE) then
+        local List = self.CurrentScope:GetSymbol(CurrentNode.LeftNode.Token.Value)
+        local Index = self:GetType(CurrentNode.RightNode)
+        if (List == nil) then
+            Error:Error("SEMANTIC ERROR: LIST OF NAME " .. CurrentNode.LeftNode.Token.Value .. " NOT DECLARED")
+        elseif (List.Type ~= self.Tokens.LIST) then
+            Error:Error("SEMANTIC ERROR: CANNOT USE LIST OPERATION ON NON-LIST " .. CurrentNode.Token.LineNumber)
+        elseif (Index.Type ~= self.Tokens.NUM) then
+            Error:Error("SEMANTIC ERROR: CANNOT INDEX A LIST WITH A NON NUM" .. CurrentNode.Token.LineNumber)
         end
     elseif (CurrentNode.Token.Type == self.Tokens.PRINT) then
         self:GetType(CurrentNode.NextNode)
@@ -197,18 +210,27 @@ function CSemanticAnalyser:GetType(CurrentNode)
         end
     elseif (CurrentNode.Token.Type == self.Tokens.LIST) then
         if (CurrentNode.NextNode.Token) then
-            local Index = CurrentNode.NextNode.Token.Value
+            local Index = self:GetType(CurrentNode.NextNode)
             local List = self.CurrentScope:GetSymbol(CurrentNode.Token.Value)
             if (List == nil) then
                 Error:Error("SEMANTIC ERROR: LIST OF NAME " .. CurrentNode.Token.Value .. " NOT DECLARED")
-            elseif (Index > #List.Members or Index < 1) then
-                Error:Error("SEMANTIC ERROR: LIST " .. List.Name .. " OUT OF BOUNDS")
             elseif (List.Type ~= self.Tokens.LIST) then
                 Error:Error("SEMANTIC ERROR: CANNOT INDEX NON-LIST ON LINE " .. CurrentNode.Token.LineNumber)
+            elseif (Index.Type ~= self.Tokens.NUM) then
+                Error:Error("SEMANTIC ERROR: CANNOT INDEX A LIST WITH A NON NUM ON LINE " .. CurrentNode.Token.LineNumber)
             else
-                return List.Members[CurrentNode.NextNode.Token.Value].Token
+                if (List.Members[1] == nil) then
+                    Error:Error("SEMANTIC ERROR: CANNOT INDEX A EMPTY LIST ON LINE " .. CurrentNode.Token.LineNumber)
+                else
+                    return List.Members[1].Token
+                end
             end
         else
+            for i = 1, #CurrentNode.NextNode do
+                if (self:GetType(CurrentNode.NextNode[i]).Type ~= self.Tokens.NUM) then
+                    Error:Error("SEMANTIC ERROR: LISTS CAN ONLY CONTAIN NUMS ON LINE" .. CurrentNode.Token.LineNumber)
+                end
+            end
             return CurrentNode.Token
         end
     end
