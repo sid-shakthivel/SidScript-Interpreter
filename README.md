@@ -6,9 +6,9 @@ SidScript interpreter written in Lua.
 
 `SidScriptInterpreter.exe [filename.txt]`
 
-## Usage - MacOS
+## Usage - macOS
 
-`src/SidScriptInterpreterMacOS.lua.lua [filename.txt]`
+`src/SidScriptInterpreterMacOS.lua [filename.txt]`
 
 ## Building Natively - Windows
 
@@ -16,10 +16,10 @@ SidScript interpreter written in Lua.
 gh repo clone sid-shakthivel/Interpreter
 cd Interpreter-master
 gh repo clone noahp/srlua-mingw
-srlua-mingw-master\glue.exe srlua-mingw-master\srlua.exe src\SidScriptInterpreterWindows.lua SidScriptInterpreter.exe
+srlua-mingw-master\glue.exe srlua-mingw-master\srlua.exe src\SidScriptInterpreter.lua SidScriptInterpreter.exe
 ```
 
-## Building Natively - MacOS
+## Building Natively - macOS
 
 ```
 brew install lua

@@ -1,5 +1,87 @@
 local Error = require("src.Error")
 
+CSymbol = { Name, Type }
+
+function CSymbol:new(Name, Type)
+    NewSymbol = {}
+    setmetatable(NewSymbol, self)
+    NewSymbol.Name = Name
+    NewSymbol.Type = Type
+    self.__index = self
+    return NewSymbol
+end
+
+CFunctionSymbol = { Name, Type, Parameters }
+
+function CFunctionSymbol:new(Name, Type, Parameters)
+    NewFunctionSymbol = {}
+    setmetatable(NewFunctionSymbol, self)
+    NewFunctionSymbol.Name = Name
+    NewFunctionSymbol.Type = Type
+    NewFunctionSymbol.Parameters = Parameters
+    self.__index = self
+    return NewFunctionSymbol
+end
+
+CListSymbol = { Name, Type, Members }
+
+function CListSymbol:new(Name, Type, Members)
+    NewListSymbol = {}
+    setmetatable(NewListSymbol, self)
+    NewListSymbol.Name = Name
+    NewListSymbol.Type = Type
+    NewListSymbol.Members = Members
+    self.__index = self
+    return NewListSymbol
+end
+
+CSymbolTable = { Name, Symbols, EnclosingScope }
+
+function CSymbolTable:new(Name, EnclosingScope)
+    NewSymbolTable = {}
+    setmetatable(NewSymbolTable, self)
+    NewSymbolTable.Name = Name
+    NewSymbolTable.Symbols = {}
+    NewSymbolTable.EnclosingScope = EnclosingScope
+    self.__index = self
+    return NewSymbolTable
+end
+
+function CSymbolTable:SetSymbol(Symbol)
+    self.Symbols[Symbol.Name] = Symbol
+end
+
+function CSymbolTable:GetSymbol(Name)
+    if (self.Symbols[Name]) then
+        return self.Symbols[Name]
+    elseif (self.EnclosingScope == nil) then
+        return nil
+    else
+        return self.EnclosingScope:GetSymbol(Name)
+    end
+end
+
+function CSymbolTable:GetLastFunction(Scope)
+    if (Scope.Name == "Global") then
+        Error:Error("SEMANTIC ERROR: CAN ONLY RETURN IN FUNCTION")
+    elseif (Scope.EnclosingScope:GetSymbol(Scope.Name) and Scope.EnclosingScope:GetSymbol(Scope.Name).Type == "NUM") then
+        return Scope.EnclosingScope:GetSymbol(Scope.Name)
+    else
+        return CSymbolTable:GetLastFunction(Scope.EnclosingScope)
+    end
+end
+
+function ConcatenateTable(Table1, Table2)
+    local NewTable = {}
+    for i = 1, #Table1 do
+        NewTable[i] = Table1[i]
+    end
+    for i = 1, #Table2 do
+        NewTable[#Table1+i] = Table2[i]
+    end
+    return NewTable
+end
+
 CSemanticAnalyser = { Tokens, CurrentScope, GlobalScope }
 
 function CSemanticAnalyser:new(Tokens)
@@ -234,88 +316,6 @@ function CSemanticAnalyser:GetType(CurrentNode)
             return CurrentNode.Token
         end
     end
-end
-
-CSymbolTable = { Name, Symbols, EnclosingScope }
-
-function CSymbolTable:new(Name, EnclosingScope)
-    NewSymbolTable = {}
-    setmetatable(NewSymbolTable, self)
-    NewSymbolTable.Name = Name
-    NewSymbolTable.Symbols = {}
-    NewSymbolTable.EnclosingScope = EnclosingScope
-    self.__index = self
-    return NewSymbolTable
-end
-
-function CSymbolTable:SetSymbol(Symbol)
-    self.Symbols[Symbol.Name] = Symbol
-end
-
-function CSymbolTable:GetSymbol(Name)
-    if (self.Symbols[Name]) then
-        return self.Symbols[Name]
-    elseif (self.EnclosingScope == nil) then
-        return nil
-    else
-        return self.EnclosingScope:GetSymbol(Name)
-    end
-end
-
-function CSymbolTable:GetLastFunction(Scope)
-    if (Scope.Name == "Global") then
-        Error:Error("SEMANTIC ERROR: CAN ONLY RETURN IN FUNCTION")
-    elseif (Scope.EnclosingScope:GetSymbol(Scope.Name) and Scope.EnclosingScope:GetSymbol(Scope.Name).Type == "NUM") then
-        return Scope.EnclosingScope:GetSymbol(Scope.Name)
-    else
-        return CSymbolTable:GetLastFunction(Scope.EnclosingScope)
-    end
-end
-
-CSymbol = { Name, Type }
-
-function CSymbol:new(Name, Type)
-    NewSymbol = {}
-    setmetatable(NewSymbol, self)
-    NewSymbol.Name = Name
-    NewSymbol.Type = Type
-    self.__index = self
-    return NewSymbol
-end
-
-CFunctionSymbol = { Name, Type, Parameters }
-
-function CFunctionSymbol:new(Name, Type, Parameters)
-    NewFunctionSymbol = {}
-    setmetatable(NewFunctionSymbol, self)
-    NewFunctionSymbol.Name = Name
-    NewFunctionSymbol.Type = Type
-    NewFunctionSymbol.Parameters = Parameters
-    self.__index = self
-    return NewFunctionSymbol
-end
-
-CListSymbol = { Name, Type, Members }
-
-function CListSymbol:new(Name, Type, Members)
-    NewListSymbol = {}
-    setmetatable(NewListSymbol, self)
-    NewListSymbol.Name = Name
-    NewListSymbol.Type = Type
-    NewListSymbol.Members = Members
-    self.__index = self
-    return NewListSymbol
-end
-
-function ConcatenateTable(Table1, Table2)
-    local NewTable = {}
-    for i = 1, #Table1 do
-        NewTable[i] = Table1[i]
-    end
-    for i = 1, #Table2 do
-        NewTable[#Table1+i] = Table2[i]
-    end
-    return NewTable
 end
 
 return { CSemanticAnalyser }

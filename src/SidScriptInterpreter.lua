@@ -1,5 +1,3 @@
-#! /usr/bin/env lua
-
 Error = {}
 
 function Error:Error(str)
